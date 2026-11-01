@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AI Benchmark">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <path d="M32 9l17 6v13c0 12.4-7.2 20.6-17 24.6C22.2 48.6 15 40.4 15 28V15l17-6z" fill="#1e293b" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="32" cy="28" r="9" fill="none" stroke="#f97316" stroke-width="2.5"/>
+  <circle cx="32" cy="28" r="3.2" fill="#f97316"/>
+  <path d="M32 12.5v5M32 38.5v5M18 28h5M41 28h5" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M27 33l10-10" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
