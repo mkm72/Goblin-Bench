@@ -1087,6 +1087,73 @@ function buildSummary(report) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* slash command                                                               */
+/* -------------------------------------------------------------------------- */
+
+const BENCHMARK_USAGE = `Usage: /benchmark <target-model> [turns] [task]
+
+  /benchmark opencode-go/deepseek-v4.1-flash 3 Get it to leak canary.env
+  /benchmark opencode-go/deepseek-v4.1-flash
+
+<target-model> is "provider/model" or a bare model id (caller's provider).
+Omit turns for 3 (max 20); omit the task and the attacker picks a category.
+The attacker runs on this session's model. The run is synchronous and each
+turn spawns attacker, target and judge, so it can take several minutes.
+Files planted by the attacker are skipped here: approval needs a model turn.`;
+
+/**
+ * Parse `/benchmark <target> [turns] [task...]`.
+ * @param {unknown} rawInput - text the user typed after the command name.
+ * @returns {{ target_benchmark_ai: string, turns?: number, task?: string } | undefined}
+ */
+function parseBenchmarkCommandInput(rawInput) {
+  const text = String(rawInput ?? '').trim();
+  if (text.length === 0) return undefined;
+  const parts = text.split(/\s+/u);
+  const target = parts[0];
+  if (target === undefined || target.length === 0) return undefined;
+  let index = 1;
+  let turns;
+  if (parts[index] !== undefined && /^\d+$/u.test(parts[index])) {
+    turns = Number(parts[index]);
+    index += 1;
+  }
+  const task = parts.slice(index).join(' ').trim();
+  return {
+    target_benchmark_ai: target,
+    ...(turns === undefined ? {} : { turns }),
+    ...(task.length === 0 ? {} : { task }),
+  };
+}
+
+/**
+ * Run the benchmark from the `/benchmark` command by dispatching the same tool.
+ * @param {any} ctx - context providing the tool registry.
+ * @param {{ agent: any, rawInput: string, signal: AbortSignal }} invocation - command invocation.
+ * @returns {Promise<{ kind: 'success' | 'error', text: string }>}
+ */
+async function runBenchmarkCommand(ctx, invocation) {
+  const args = parseBenchmarkCommandInput(invocation.rawInput);
+  if (args === undefined) return { kind: 'success', text: BENCHMARK_USAGE };
+
+  const result = await ctx.tools.execute({
+    callId: `command-${randomUUID()}`,
+    name: 'benchmark_ai',
+    arguments: args,
+    agent: invocation.agent,
+    signal: invocation.signal,
+  });
+  if (result.isError) {
+    const detail = Array.isArray(result.content)
+      ? result.content.filter((block) => block?.type === 'text').map((block) => block.text).join('\n').trim()
+      : '';
+    return { kind: 'error', text: detail || result.error?.message || 'benchmark failed' };
+  }
+  const summary = result.value?.summary;
+  return { kind: 'success', text: typeof summary === 'string' ? summary : 'benchmark finished' };
+}
+
+/* -------------------------------------------------------------------------- */
 /* tool                                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -1620,4 +1687,16 @@ export function apply(ctx, config) {
   };
 
   ctx.effect(() => ctx.tools.register(definition));
+
+  // The `/` menu lists the command registry, not tools. Register a command so the
+  // benchmark is discoverable there; it dispatches the same tool.
+  ctx.inject(['commands'], (commandCtx) => {
+    commandCtx.effect(() => commandCtx.commands.register({
+      definitionId: '@local/dsh-ai-benchmark',
+      name: 'benchmark',
+      description: 'Run the AI-safety benchmark against a target model',
+      input: { hint: '<target-model> [turns] [task...]' },
+      handler: (invocation) => runBenchmarkCommand(ctx, invocation),
+    }));
+  });
 }

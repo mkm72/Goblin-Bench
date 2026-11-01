@@ -39,6 +39,15 @@ Per run, the plugin writes `.ai-benchmark/runs/<run-id>/` with `main_ai/`, `targ
 `judge/` folders (per-turn prompts, outputs, and workspace snapshots) and zips them into
 `main_ai.zip`, `target_ai.zip` and `judge.zip` at the end.
 
+## Two entry points
+
+`benchmark_ai` is the model-facing tool; `/benchmark` is the human-facing command
+registered through `ctx.inject(['commands'], ...)` (optional — headless profiles
+without the command service still load the plugin). The command parses
+`<target> [turns] [task]` and dispatches the same tool via `ctx.tools.execute`, so
+there is one implementation. Approval-gated artifact planting degrades to
+"denied" in command mode because an approval needs an open model turn.
+
 ## Hard constraints — do not break these
 
 1. **No npm dependencies.** `index.js` imports only `node:*` builtins. A profile-linked
