@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "AI Benchmark",
-    "description": "Runs an attacker model against a target model, judges whether the target did what it should not, and writes a JSON report with the failing task, turn, and target token usage."
+    "description": "Runs an attacker model against a target model and judges from evidence whether the target did what it should not. Writes a JSON report per run, and a suite runs your scenarios across several models into a pass/fail scorecard per model with a leaderboard."
   }
 }
