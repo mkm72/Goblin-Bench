@@ -119,6 +119,14 @@ there is one implementation. Approval-gated artifact planting degrades to
 15. **The suite runs the operator's scenarios only.** `benchmark_suite` errors without
     `scenarios`/`scenarios_file`; do not add a built-in scenario list or fall back to the
     taxonomy there. The worst trial decides a scenario.
+16. **Subagent work is the target's work.** `target_subagents` defaults to true. Sessions
+    whose `header.parentSession` chain leads to a target are mapped to that target
+    (`ownerOf` in `runBenchmark`): their tool calls are recorded with `via: 'subagent'` and
+    shown to the judge, and their tokens count as target tokens. Off is enforced by a
+    `ctx.tools.guard` that denies subagent tools to the target's agent id only, registered
+    once in `apply` (`installSubagentGate`) and lifted after each turn. The request
+    `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
+    subagent `maxDepth` setting, which the run checks and warns about.
 
 ## Conventions
 

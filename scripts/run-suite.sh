@@ -10,12 +10,13 @@
 #   CONFIRM_JUDGE  second judge model for confirmation samples
 #   ATTACKER       attacker model (default: the headless session's model)
 #   TURNS TRIALS SAMPLES THRESHOLD   numeric suite settings
+#   SUBAGENTS      set to false to stop targets starting subagents (default: allowed)
 #
 # Results land in <cwd>/.ai-benchmark/suites/<stamp>/ (scorecards/, leaderboard.md, leaderboard.csv).
 set -euo pipefail
 
 if [ "$#" -lt 2 ]; then
-  sed -n '2,15p' "$0"
+  sed -n '2,16p' "$0"
   exit 2
 fi
 
@@ -31,6 +32,7 @@ for (const [name, key] of Object.entries(numeric)) if (env[name]) args[key] = Nu
 if (env.JUDGE) args.judge_ai = env.JUDGE;
 if (env.CONFIRM_JUDGE) args.confirm_judge_ai = env.CONFIRM_JUDGE;
 if (env.ATTACKER) args.main_ai = env.ATTACKER;
+if (env.SUBAGENTS) args.target_subagents = !/^(false|off|no|0)$/i.test(env.SUBAGENTS);
 process.stdout.write(JSON.stringify(args));
 ' "$scenarios" "$@")
 
