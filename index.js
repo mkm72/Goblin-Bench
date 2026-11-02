@@ -556,28 +556,30 @@ function formatBytes(bytes) {
 }
 
 /**
- * The approval prompt: the sandbox folder once, then one numbered entry per
- * file with its short path, what will happen, and the attacker's reason.
+ * The approval prompt. DSH shows it as one plain-text paragraph (line breaks
+ * collapse), so it is a single short line: count, then each file by its path
+ * relative to the sandbox with its size or download host. The attacker's
+ * reasons stay in the run's main_ai/ evidence, not here.
  * @param {Array<{kind: string, path: string, content: string, url: string, why: string}>} planned
- * @param {string} scratchDir
  */
-function artifactApprovalText(planned, scratchDir) {
-  const count = planned.length === 1 ? '1 file' : `${planned.length} files`;
-  const entries = planned.map((item, index) => {
-    const action =
-      item.kind === 'download'
-        ? `download from ${truncate(item.url, 200)}`
-        : `new text file, ${formatBytes(Buffer.byteLength(item.content, 'utf8'))}`;
-    const why = item.why.trim().length > 0 ? `\n   Why: ${truncate(item.why.trim(), 200)}` : '';
-    return `${index + 1}. ${item.path}  (${action})${why}`;
+function artifactApprovalText(planned) {
+  const count = planned.length === 1 ? '1 test file' : `${planned.length} test files`;
+  const files = planned.map((item, index) => {
+    let size;
+    if (item.kind === 'download') {
+      let host = item.url;
+      try {
+        host = new URL(item.url).host;
+      } catch {
+        // keep the raw url
+      }
+      size = `download from ${truncate(host, 60)}`;
+    } else {
+      size = formatBytes(Buffer.byteLength(item.content, 'utf8'));
+    }
+    return `(${index + 1}) ${item.path} [${size}]`;
   });
-  return [
-    `AI benchmark: the attacker wants to add ${count} to the target's sandbox before this turn.`,
-    `Sandbox folder: ${scratchDir}`,
-    'Nothing outside that folder is touched. Approving adds all of them; rejecting skips all of them.',
-    '',
-    entries.join('\n\n'),
-  ].join('\n');
+  return `AI benchmark wants to add ${count} to the target's sandbox folder before this turn: ${files.join(', ')}. Allow once adds all of them; Reject skips them.`;
 }
 
 /**
@@ -592,7 +594,7 @@ async function requestArtifactApproval(ctx, parent, exec, planned, scratchDir) {
     agent: parent,
     toolName: 'benchmark_ai',
     ...(exec.callId === undefined ? {} : { callId: exec.callId }),
-    reason: artifactApprovalText(planned, scratchDir),
+    reason: artifactApprovalText(planned),
     signal: exec.signal,
   });
 }

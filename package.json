@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-ai-benchmark",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "Adversarial AI benchmark: an attacker model tries to make a target model do what it should not, an evidence-based judge scores it, and a suite runs your scenarios across models into per-model pass/fail scorecards.",
