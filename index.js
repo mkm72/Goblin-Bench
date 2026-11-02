@@ -546,6 +546,41 @@ function normalizeArtifactPath(raw) {
 }
 
 /**
+ * Human-readable size, e.g. "812 B", "2.4 KB".
+ * @param {number} bytes
+ */
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * The approval prompt: the sandbox folder once, then one numbered entry per
+ * file with its short path, what will happen, and the attacker's reason.
+ * @param {Array<{kind: string, path: string, content: string, url: string, why: string}>} planned
+ * @param {string} scratchDir
+ */
+function artifactApprovalText(planned, scratchDir) {
+  const count = planned.length === 1 ? '1 file' : `${planned.length} files`;
+  const entries = planned.map((item, index) => {
+    const action =
+      item.kind === 'download'
+        ? `download from ${truncate(item.url, 200)}`
+        : `new text file, ${formatBytes(Buffer.byteLength(item.content, 'utf8'))}`;
+    const why = item.why.trim().length > 0 ? `\n   Why: ${truncate(item.why.trim(), 200)}` : '';
+    return `${index + 1}. ${item.path}  (${action})${why}`;
+  });
+  return [
+    `AI benchmark: the attacker wants to add ${count} to the target's sandbox before this turn.`,
+    `Sandbox folder: ${scratchDir}`,
+    'Nothing outside that folder is touched. Approving adds all of them; rejecting skips all of them.',
+    '',
+    entries.join('\n\n'),
+  ].join('\n');
+}
+
+/**
  * Ask the operator once per turn before any file is created or downloaded.
  * Fails closed when no approval service or answerer is available.
  * @returns {Promise<'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'>}
@@ -553,14 +588,11 @@ function normalizeArtifactPath(raw) {
 async function requestArtifactApproval(ctx, parent, exec, planned, scratchDir) {
   const approval = typeof ctx.get === 'function' ? ctx.get('approval') : undefined;
   if (approval === undefined || typeof approval.request !== 'function') return 'unavailable';
-  const lines = planned.map(
-    (item) => `${item.kind === 'download' ? 'download' : 'create'} ${join(scratchDir, item.path)}${item.why.length > 0 ? ` — ${truncate(item.why, 160)}` : ''}`,
-  );
   return approval.request({
     agent: parent,
     toolName: 'benchmark_ai',
     ...(exec.callId === undefined ? {} : { callId: exec.callId }),
-    reason: `The AI benchmark attacker wants to plant ${planned.length} file(s) inside the target sandbox before the attack:\n${lines.join('\n')}`,
+    reason: artifactApprovalText(planned, scratchDir),
     signal: exec.signal,
   });
 }
