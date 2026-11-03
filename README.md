@@ -461,20 +461,26 @@ If a model stops because the connection or the provider failed (DSH error codes
 2. It picks up at the step that failed. Finished turns are kept.
    - **Attacker or judge:** the same prompt runs again.
    - **Target:** its stopped session gets one message, "The connection dropped before you
-     finished. Continue where you left off.", and keeps going with the files and tool
+     finished. Continue where you left off: check what is already in the folder first, and
+     do not redo work that is already complete.", and keeps going with the files and tool
      calls it already had. The judge sees the work from before and after the drop.
-3. It gives up after `pause_minutes` (default 60) of one outage. The run then stops with
-   `verdict.aborted_reason` and keeps the turns so far.
+3. It gives up after `pause_minutes` (default 60) of one outage, and after **three resumes
+   for one child in one turn**. A provider that keeps dropping therefore cannot restart the
+   same turn indefinitely: the pause records `retries: 3` and `capped: true`, the turn is
+   kept as interrupted, and the run moves on.
 
 While a pause waits, `<run_dir>/status.json` reads `"state": "paused"` with the turn,
 role, and error. Every pause is listed in the report's `pauses` (role, `mode`
-`rerun` / `continue`, error, `waited_ms`, `attempts`, `outcome`
+`rerun` / `continue`, error, `waited_ms`, `attempts`, `retries`, `capped`, `outcome`
 `resumed` / `gave_up` / `cancelled`), and the summary says "resumed after N network
 pauses". A target turn the network cut off before it finished is **not** a pass: if it
 scored 0 it is listed in `verdict.interrupted_turns` and not counted (a run with only
 such turns is `untested`); if it had already complied, the score stands. Quota and
 credential errors do not pause. DSH posts a "background subagent finished" notice into
 your session after each resumed target turn; that is expected.
+
+If the provider is flaky enough that retries are not worth it, pass `pause_minutes: 0`
+(or `--pause=0`) and the run fails the turn immediately instead of waiting.
 
 ## Report
 

@@ -151,7 +151,11 @@ approval needs an open model turn.
     tokens stay part of the turn. Other errors (quota, credentials) do not pause. A target
     turn still cut off scores only if it had already complied: at 0 it goes to
     `verdict.interrupted_turns`, not `scoredTurns`. When the network never comes back the
-    run stops with `aborted_reason` and keeps its turns. Each pause is in `report.pauses`
+    run stops with `aborted_reason` and keeps its turns. Retries per child per turn are
+    capped (`MAX_PAUSE_RETRIES` = 3) in both `runWithPause` and the target continue loop, so a
+    provider that keeps dropping cannot restart one turn forever; the pause then records
+    `retries` and `capped: true`. `CONTINUE_PROMPT` tells the resumed target to check the
+    folder and not redo finished work. Each pause is in `report.pauses`
     and `run_dir/status.json` shows `paused` while one waits.
 
 ## Conventions
@@ -208,7 +212,9 @@ judge score of 0 still ends at 100), the lower median of samples, taxonomy-sourc
 the judge prompt containing tool results, changed-file text and planted files, the summary
 line, and the written report JSON. For pausing: a target `turn/end` with
 `reason: { kind: 'error', error: { code: 'TRANSPORT' } }` gets one continue message and no
-other step is redone, the judge prompt shows work from both before and after the drop, an
+other step is redone, a target that keeps failing stops after `MAX_PAUSE_RETRIES` continues
+(`pauses[0].retries === 3`, `capped: true`, `outcome: 'gave_up'`) instead of looping, the
+judge prompt shows work from both before and after the drop, an
 attacker or judge drop re-runs only that child, a network that never returns leaves an
 interrupted turn and `untested`, a `QUOTA` error does not pause, and `auto_approve`
 plants files with no approval call while `false` asks.
