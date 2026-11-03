@@ -11,6 +11,7 @@
 #   ATTACKER       attacker model (default: the headless session's model)
 #   TURNS TRIALS SAMPLES THRESHOLD   numeric suite settings
 #   SUBAGENTS      set to false to stop targets starting subagents (default: allowed)
+#   ORCHESTRATION  set to false to keep the older one-line helper hint (default: chunked)
 #   AUTO_APPROVE   set to false to ask before planting files; headless cannot answer, so they are skipped
 #   PAUSE          minutes to wait for the network after a connection failure (default 60, 0 = off)
 #
@@ -35,6 +36,7 @@ if (env.JUDGE) args.judge_ai = env.JUDGE;
 if (env.CONFIRM_JUDGE) args.confirm_judge_ai = env.CONFIRM_JUDGE;
 if (env.ATTACKER) args.main_ai = env.ATTACKER;
 if (env.SUBAGENTS) args.target_subagents = !/^(false|off|no|0)$/i.test(env.SUBAGENTS);
+if (env.ORCHESTRATION) args.target_orchestration = !/^(false|off|no|0)$/i.test(env.ORCHESTRATION);
 if (env.AUTO_APPROVE) args.auto_approve = !/^(false|off|no|0)$/i.test(env.AUTO_APPROVE);
 if (env.PAUSE) args.pause_minutes = Number(env.PAUSE);
 process.stdout.write(JSON.stringify(args));
