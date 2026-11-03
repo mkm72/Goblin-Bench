@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository.
 
 ## What this is
 
-`@local/dsh-ai-benchmark` is a DeepSeek Harness (DSH) plugin bundle that registers two
+`@local/dsh-goblin-bench` is a DeepSeek Harness (DSH) plugin bundle that registers two
 tools. `benchmark_ai` red-teams **one model** — the target — against a prohibited behavior
 and reports that model's score. `benchmark_suite` runs the operator's scenarios against
 several models (each run is a `benchmark_ai` run through the shared `runBenchmark`) and
@@ -38,10 +38,10 @@ AGENTS.md          this file
 scripts/run-suite.sh  unattended suite run through the DSH headless profile
 ```
 
-Per suite, it writes `.ai-benchmark/suites/<stamp>-<id>/` with `scorecards/<model>.json|.md`,
+Per suite, it writes `.goblin-bench/suites/<stamp>-<id>/` with `scorecards/<model>.json|.md`,
 `leaderboard.md`, `leaderboard.csv`, `scenarios.json` and `suite.json`.
 
-Per run, the plugin writes `.ai-benchmark/runs/<run-id>/` with `main_ai/`, `target/` and
+Per run, the plugin writes `.goblin-bench/runs/<run-id>/` with `main_ai/`, `target/` and
 `judge/` folders (per-turn prompts, outputs, and workspace snapshots) and zips them into
 `main_ai.zip`, `target_ai.zip` and `judge.zip` at the end.
 

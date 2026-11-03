@@ -1,5 +1,5 @@
 /**
- * Adversarial AI benchmark.
+ * Goblin Bench: adversarial AI benchmark.
  *
  * An attacker model (`main_ai`) is asked, turn by turn, for one prompt that
  * would make a target model (`target_benchmark_ai`) perform a prohibited
@@ -9,7 +9,7 @@
  * records the scores and a short pass/fail summary, and each role's output is
  * captured in its own folder and zipped at the end.
  *
- * @module @local/dsh-ai-benchmark
+ * @module @local/dsh-goblin-bench
  */
 
 import { createHash, randomUUID } from 'node:crypto';
@@ -20,7 +20,7 @@ import { connect } from 'node:net';
 import { deflateRawSync } from 'node:zlib';
 
 /** Cordis plugin name. */
-export const name = 'ai-benchmark';
+export const name = 'goblin-bench';
 
 /** Services the tool needs at call time. */
 export const inject = ['tools', 'subagents'];
@@ -553,7 +553,7 @@ async function runChild(ctx, options) {
   const timer = Number.isFinite(timeoutMs) && timeoutMs > 0
     ? setTimeout(() => {
         timedOut = true;
-        controller.abort(new Error('AI benchmark child timed out'));
+        controller.abort(new Error('Goblin Bench child timed out'));
       }, timeoutMs)
     : undefined;
 
@@ -769,7 +769,7 @@ function artifactApprovalText(planned) {
     }
     return `(${index + 1}) ${item.path} [${size}]`;
   });
-  return `AI benchmark wants to add ${count} to the target's sandbox folder before this turn: ${files.join(', ')}. Allow once adds all of them; Reject skips them.`;
+  return `Goblin Bench wants to add ${count} to the target's sandbox folder before this turn: ${files.join(', ')}. Allow once adds all of them; Reject skips them.`;
 }
 
 /**
@@ -2144,7 +2144,7 @@ const SUITE_USAGE = `Usage: /benchmark-suite <model[,model...]> --scenarios=<fil
 
 Runs every scenario in the file against every model and writes one scorecard per
 model (pass/fail, score, the turn and technique that broke it) plus a leaderboard
-under .ai-benchmark/suites/. The file is a JSON array, JSON Lines, or one
+under .goblin-bench/suites/. The file is a JSON array, JSON Lines, or one
 scenario per line. Without --judge the attacker judges (self-judged).
 Every target is told to split the work across chunks it starts in one step;
 --no-orchestration keeps the older one-line hint.
@@ -2625,7 +2625,7 @@ async function runSuite(ctx, limits, input, exec) {
   }
 
   const suiteId = randomUUID();
-  const suiteDir = join(cwd, '.ai-benchmark', 'suites', `${isoNow().replace(/[:.]/gu, '-')}-${suiteId.slice(0, 8)}`);
+  const suiteDir = join(cwd, '.goblin-bench', 'suites', `${isoNow().replace(/[:.]/gu, '-')}-${suiteId.slice(0, 8)}`);
   await mkdir(join(suiteDir, 'scorecards'), { recursive: true });
   await writeFile(join(suiteDir, 'scenarios.json'), `${JSON.stringify(scenarios, null, 2)}\n`, 'utf8');
 
@@ -2923,7 +2923,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   }
 
   const runId = randomUUID();
-  const runDir = join(parentCwd, '.ai-benchmark', 'runs', runId);
+  const runDir = join(parentCwd, '.goblin-bench', 'runs', runId);
   const roleDirs = {
     main_ai: join(runDir, 'main_ai'),
     target: join(runDir, 'target'),
@@ -3203,7 +3203,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
         effort: mainEffort,
       });
       const attackerRun = attackerStep.run;
-      if (exec.signal.aborted) throw new Error('AI benchmark aborted by the caller');
+      if (exec.signal.aborted) throw new Error('Goblin Bench aborted by the caller');
       for (const id of attackerStep.childIds) attackerUsage = addUsage(attackerUsage, snapshotUsage(usageBySession, id));
       if (attackerRun.timedOut || attackerRun.aborted) {
         runError = attackerRun.timedOut
@@ -3296,14 +3296,14 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
         }
         await closePause(entry, targetFailure !== undefined);
       }
-      if (exec.signal.aborted) throw new Error('AI benchmark aborted by the caller');
+      if (exec.signal.aborted) throw new Error('Goblin Bench aborted by the caller');
       // A target the network cut off never finished; its turn counts only if it
       // had already complied.
       const targetInterrupted = targetFailure !== undefined;
       const targetTokens = snapshotUsage(usageBySession, targetRun.childId);
       const targetText = textOf(targetRun.result);
       const targetToolCalls = toolCallsBySession.get(targetRun.childId) ?? [];
-      if (targetRun.aborted) throw new Error('AI benchmark aborted by the caller');
+      if (targetRun.aborted) throw new Error('Goblin Bench aborted by the caller');
 
       const workspaceAfter = await readWorkspaceState(scratchDir);
       const workspaceDiff = diffWorkspace(workspaceBefore, workspaceAfter);
@@ -3384,7 +3384,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
           effort: effortFor(route),
         });
         const judgeRun = judgeStep.run;
-        if (judgeRun.aborted || exec.signal.aborted) throw new Error('AI benchmark aborted by the caller');
+        if (judgeRun.aborted || exec.signal.aborted) throw new Error('Goblin Bench aborted by the caller');
         for (const id of judgeStep.childIds) judgeUsage = addUsage(judgeUsage, snapshotUsage(usageBySession, id));
         if (judgeStep.failure !== undefined) judgeFailure = judgeStep.failure;
         const sample = parseJudgeSample(judgeRun, route);
@@ -3469,7 +3469,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   }
 
   if (runError !== undefined && attempts.length === 0) {
-    throw new Error(`AI benchmark stopped before the first attempt: ${runError}`);
+    throw new Error(`Goblin Bench stopped before the first attempt: ${runError}`);
   }
 
   const targetTurns = attempts.map((attempt) => ({
@@ -3501,7 +3501,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   const mainStatus = { full_compliance: 'passed', partial_compliance: 'partial', no_compliance: 'failed', untested: 'untested' }[outcome];
   const targetStatus = { full_compliance: 'failed', partial_compliance: 'partial', no_compliance: 'passed', untested: 'untested' }[outcome];
   const finishedAt = isoNow();
-  const reportPath = join(parentCwd, '.ai-benchmark', 'reports', reportFileName(runId));
+  const reportPath = join(parentCwd, '.goblin-bench', 'reports', reportFileName(runId));
 
   const failedTurns = attempts.filter((attempt) => (attempt.judgment?.score ?? 0) > 0).map((attempt) => attempt.turn);
   await writeFile(
@@ -3615,7 +3615,7 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
     ],
   };
   await writeStatus({ state: 'finished', report_path: reportPath });
-  await mkdir(join(parentCwd, '.ai-benchmark', 'reports'), { recursive: true });
+  await mkdir(join(parentCwd, '.goblin-bench', 'reports'), { recursive: true });
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
   const artifactsCreated = attempts.reduce(
@@ -3881,14 +3881,14 @@ export function apply(ctx, config) {
   // benchmark is discoverable there; it dispatches the same tool.
   ctx.inject(['commands'], (commandCtx) => {
     commandCtx.effect(() => commandCtx.commands.register({
-      definitionId: '@local/dsh-ai-benchmark',
+      definitionId: '@local/dsh-goblin-bench',
       name: 'benchmark',
       description: 'Run the AI-safety benchmark against a target model',
       input: { hint: '<target-model> [turns] [task...]' },
       handler: (invocation) => runBenchmarkCommand(ctx, invocation),
     }));
     commandCtx.effect(() => commandCtx.commands.register({
-      definitionId: '@local/dsh-ai-benchmark/suite',
+      definitionId: '@local/dsh-goblin-bench/suite',
       name: 'benchmark-suite',
       description: 'Run your scenarios against several models and write a scorecard per model',
       input: { hint: '<model[,model...]> --scenarios=<file> [--trials=n] [--turns=n] [--judge=<model>]' },

@@ -15,7 +15,7 @@
 #   AUTO_APPROVE   set to false to ask before planting files; headless cannot answer, so they are skipped
 #   PAUSE          minutes to wait for the network after a connection failure (default 60, 0 = off)
 #
-# Results land in <cwd>/.ai-benchmark/suites/<stamp>/ (scorecards/, leaderboard.md, leaderboard.csv).
+# Results land in <cwd>/.goblin-bench/suites/<stamp>/ (scorecards/, leaderboard.md, leaderboard.csv).
 set -euo pipefail
 
 if [ "$#" -lt 2 ]; then

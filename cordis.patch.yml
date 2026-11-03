@@ -1,5 +1,5 @@
-# AI benchmark bundle: mounts the adversarial benchmark tool.
+# Goblin Bench bundle: mounts the adversarial benchmark tool.
 # `name` is the package name, resolved through the profile's node_modules.
 - insert:
-    - id: ai-benchmark
-      name: '@local/dsh-ai-benchmark'
+    - id: goblin-bench
+      name: '@local/dsh-goblin-bench'

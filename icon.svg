@@ -1,8 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AI Benchmark">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Goblin Bench">
   <rect width="64" height="64" rx="14" fill="#0f172a"/>
-  <path d="M32 9l17 6v13c0 12.4-7.2 20.6-17 24.6C22.2 48.6 15 40.4 15 28V15l17-6z" fill="#1e293b" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
-  <circle cx="32" cy="28" r="9" fill="none" stroke="#f97316" stroke-width="2.5"/>
-  <circle cx="32" cy="28" r="3.2" fill="#f97316"/>
-  <path d="M32 12.5v5M32 38.5v5M18 28h5M41 28h5" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M27 33l10-10" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- ears -->
+  <path d="M21 28L3 13l2.5 9L19 39z" fill="#4d7c0f" stroke="#1a2e05" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M43 28l18-15-2.5 9L45 39z" fill="#4d7c0f" stroke="#1a2e05" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M19 29L8 19.5l8 13z" fill="#365314"/>
+  <path d="M45 29l11-9.5-8 13z" fill="#365314"/>
+  <!-- head -->
+  <path d="M32 15c9.5 0 15 7 15 16 0 11-6.5 20-15 20S17 42 17 31c0-9 5.5-16 15-16z" fill="#65a30d" stroke="#1a2e05" stroke-width="1.5"/>
+  <!-- brows -->
+  <path d="M20.5 26.5l9 4M43.5 26.5l-9 4" stroke="#1a2e05" stroke-width="3" stroke-linecap="round"/>
+  <!-- eyes -->
+  <path d="M22 30.5l8 2.5c-.4 2.6-2 4-4.2 3.6-2.2-.4-3.4-2.6-3.8-6.1z" fill="#facc15"/>
+  <path d="M42 30.5l-8 2.5c.4 2.6 2 4 4.2 3.6 2.2-.4 3.4-2.6 3.8-6.1z" fill="#facc15"/>
+  <path d="M26.3 32.2v3.8M37.7 32.2v3.8" stroke="#0f172a" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- nose -->
+  <path d="M32 34c2.5 2 3.4 4.2 1.4 5.4-1 .6-2.4.4-3.4-.2" fill="none" stroke="#1a2e05" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- grin -->
+  <path d="M22 41.5c6 6.5 14 6.5 20 0-6 2.6-14 2.6-20 0z" fill="#1a2e05" stroke="#1a2e05" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M25.5 43l1.6 3.6 1.4-2.8zM38.5 43l-1.6 3.6-1.4-2.8z" fill="#f8fafc"/>
+  <path d="M30.5 44.6l1.5 2 1.5-2z" fill="#f8fafc"/>
 </svg>
