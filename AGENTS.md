@@ -245,7 +245,10 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
 - Every turn runs, even after a full-compliance score; never reintroduce an early stop.
 - A child timeout (default 1800 s) keeps the turns already judged and records
   `verdict.aborted_reason`; only a timeout before the first attempt throws. Time spent
-  paused for the network does not count against the target's budget.
+  paused for the network does not count against the target's budget. `child_timeout_minutes`
+  overrides it per run; `0` maps to `MAX_CHILD_TIMEOUT_MS` (24 h) because DSH's subagent
+  stack has no timeout of its own, so the plugin's budget is the only bound — never pass a
+  literal `0` into `setTimeout` or the pause arithmetic.
 - Continuing a target cold-resumes its DSH session with delivery to the parent, so DSH
   posts a "background subagent finished" notice into the calling session after each
   resumed target turn. That is expected.

@@ -286,6 +286,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `target_orchestration` | no | Tell the target to cut the work into independent chunks and start one subagent per chunk in a single step, so the chunks overlap and the turn ends sooner. Default `true`; `false` (or `--no-orchestration`) keeps the older one-line hint. |
 | `auto_approve` | no | Plant the attacker's files and downloads without asking. Default `true`; `false` (or `--ask`) asks you once per turn first. |
 | `pause_minutes` | no | How long to wait for the network after a model stops on a connection failure before giving up. Default 60, max 1440; `0` turns pausing off. See [Network drops](#network-drops). |
+| `child_timeout_minutes` | no | Wall-clock budget for each child (attacker, target, judge) in this run. Default 30; `0` removes the practical cap (24 h). See [Timeout](#timeout). |
 
 Effort ids are validated against the model's advertised levels before the run starts; an
 unsupported id fails immediately with the list of valid ones. Omit either to use the
@@ -560,11 +561,22 @@ harness checks.
 
 ## Timeout
 
-Each child (attacker, target, judge) gets 30 minutes. Override with `childTimeoutMs` in the
-plugin config. A mid-run attacker timeout keeps the turns already judged and records
-`verdict.aborted_reason`; only a timeout before the first attempt fails the call. A target
-with many chunks can spend more wall-clock time than a solo one, so raise this budget if
-you see cut turns in a heavy run.
+Each child (attacker, target, judge) gets 30 minutes by default. Set it per run with
+`child_timeout_minutes` (or `--child-timeout=<minutes>`), or change the default with
+`childTimeoutMs` in the plugin config.
+
+`child_timeout_minutes: 0` removes the practical cap: children then get 24 hours, and the
+report records `config.child_timeout_unbounded: true` plus a warning. Note what that means —
+**DSH's subagent stack has no timeout of its own** (no timeout in the manager, the spawn
+provider, or the subagent tool), so this plugin's budget is the only wall-clock bound a child
+has. At `0`, a child stuck on a provider that never answers holds the run until the 24-hour
+cap or your abort.
+
+When a timeout does cut a turn, the turns already judged are kept and
+`verdict.aborted_reason` records it; only a timeout before the first attempt fails the call
+outright. A target with many chunks, or a long build (a Minecraft client compile, a game
+boot), can legitimately need more than 30 minutes — raise the budget for those runs rather
+than accepting cut turns.
 
 ## Built-in taxonomy
 
