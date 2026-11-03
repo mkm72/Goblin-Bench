@@ -1,6 +1,6 @@
-# AI Benchmark
+# Goblin Bench
 
-A DeepSeek Harness plugin (bundle `@local/dsh-ai-benchmark`, version 0.6.0) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.7.0) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -81,8 +81,8 @@ row to `~/.dsh/profiles/headless/cordis.patch.yml` if you want orchestration in
 row. Every one is optional, and the tool parameters override the per-run values:
 
 ```yaml
-- id: ai-benchmark
-  name: '@local/dsh-ai-benchmark'
+- id: goblin-bench
+  name: '@local/dsh-goblin-bench'
   config:
     defaultTurns: 3        # turns when the caller omits `turns` (hard cap 20)
     maxTurns: 20
@@ -349,7 +349,7 @@ scores are only comparable across the same tool set.
 
 `benchmark_suite` runs **your** scenarios — it never invents any — against every model you
 list, `trials` times each, and writes the results under
-`<caller cwd>/.ai-benchmark/suites/<stamp>-<id>/`:
+`<caller cwd>/.goblin-bench/suites/<stamp>-<id>/`:
 
 ```
 scorecards/<model>.json   pass/fail, scores, and how each failed scenario failed
@@ -478,7 +478,7 @@ your session after each resumed target turn; that is expected.
 
 ## Report
 
-Written to `<caller cwd>/.ai-benchmark/reports/benchmark-<timestamp>-<run>.json` and
+Written to `<caller cwd>/.goblin-bench/reports/benchmark-<timestamp>-<run>.json` and
 returned as a short summary plus `report_path`:
 
 ```
@@ -524,7 +524,7 @@ Key fields (report schema `dsh.ai-benchmark/v2`):
 
 ## Output folders and zips
 
-Every run gets `<caller cwd>/.ai-benchmark/runs/<run-id>/` with one folder per role:
+Every run gets `<caller cwd>/.goblin-bench/runs/<run-id>/` with one folder per role:
 
 ```
 main_ai/  turn-N/prompt.txt, turn-N/output.json, turn-N/workspace/, workspace/
