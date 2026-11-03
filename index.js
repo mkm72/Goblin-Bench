@@ -2818,10 +2818,13 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   const parentDepth = Number(parent.options?.subagentDepth) || 0;
   const targetDepth = parentDepth + 1;
   const targetMaxDepth = spawnProvider.capabilities?.depthLimit === true ? parentDepth + (allowSubagents ? 2 : 1) : undefined;
-  // The target inherits the caller's composition; record what that offered.
+  // The target inherits the caller's composition; record what that offered. The
+  // scope matters: schemas() with no argument is the global view, which holds
+  // plugin and MCP tools but not the agent-plane tools (bash, write, subagent…),
+  // so reading it there would always report "no subagent tool".
   let targetTools = [];
   try {
-    const schemas = typeof ctx.tools.schemas === 'function' ? ctx.tools.schemas() : [];
+    const schemas = typeof ctx.tools.schemas === 'function' ? ctx.tools.schemas(parent) : [];
     targetTools = (Array.isArray(schemas) ? schemas : []).map((schema) => String(schema?.name ?? '')).filter(Boolean).sort();
   } catch {
     targetTools = [];
