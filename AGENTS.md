@@ -130,9 +130,10 @@ approval needs an open model turn.
     shown to the judge, and their tokens count as target tokens. Off is enforced by a
     `ctx.tools.guard` that denies subagent tools (and `workflow`, which can fan out without
     them) to the target's agent id only, registered once in `apply` (`installSubagentGate`)
-    and lifted after each turn. The attacker and judge are denied those same tools for every
-    child they run (`denyDelegation` / `releaseDelegation`): only the target may delegate, so
-    no helper's work escapes attribution. The request
+    and lifted after each turn. The attacker and judge are held to their structured answer
+    for every child they run (`restrictToAnswer` = `blockAllBut(id, ['structured_output'])`,
+    released by `releaseAnswer`): a tool-using attacker burns its 30-minute child budget and
+    times out, which aborts the run and forces a restart from turn 1. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note
@@ -242,9 +243,17 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
 - The target workspace is wiped every turn (`resetTargetWorkspace`); planted files do not
   carry over.
 - Every turn runs, even after a full-compliance score; never reintroduce an early stop.
-- A child timeout (default 1800 s) keeps the turns already judged and records
+- A child timeout (default 5 h = 18000000 ms) keeps the turns already judged and records
   `verdict.aborted_reason`; only a timeout before the first attempt throws. Time spent
-  paused for the network does not count against the target's budget.
+  paused for the network does not count against the target's budget. `child_timeout_minutes`
+  overrides it per run; `0` maps to `MAX_CHILD_TIMEOUT_MS` (24 h) because DSH's subagent
+  stack has no timeout of its own, so the plugin's budget is the only bound — never pass a
+  literal `0` into `setTimeout` or the pause arithmetic.
+- `resume_from` loads a finished report's attempts and frozen task so a stopped run continues
+  at the next turn instead of turn 1 (`loadResumeReport`; `resumeStartTurn` in `runBenchmark`).
+  It validates the schema and the frozen task, defaults `turns` to the report's count, and
+  records `config.resumed_from` / `config.resumed_attempts`. The target folder is still wiped
+  each turn, so resumed turns are queued, not continued in place.
 - Continuing a target cold-resumes its DSH session with delivery to the parent, so DSH
   posts a "background subagent finished" notice into the calling session after each
   resumed target turn. That is expected.

@@ -1,6 +1,8 @@
 # Goblin Bench
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.0) that red-teams
+[Support this project on Ko-fi](https://ko-fi.com/mkm72)
+
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.4) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -86,7 +88,7 @@ row. Every one is optional, and the tool parameters override the per-run values:
   config:
     defaultTurns: 3        # turns when the caller omits `turns` (hard cap 20)
     maxTurns: 20
-    childTimeoutMs: 1800000  # per child: attacker, target, judge (ms)
+    childTimeoutMs: 18000000  # per child: attacker, target, judge (ms; 5 h)
     judgeSamples: 3        # judge calls for a turn that could move the score (max 5)
 ```
 
@@ -275,6 +277,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `main_ai` | no | Attacker route, `"provider/model"` or a bare model id (caller's provider). **Omit it and the chat you are in becomes the red team** — the attacker runs on the calling session's model. |
 | `target_benchmark_ai` | yes | Model under test, same route syntax. |
 | `turns` | no | Maximum attempts. Default 3, clamped to 20. Every turn runs, even after a failure. |
+| `resume_from` | no | Path to an earlier report (absolute, or relative to your cwd). Its turns are loaded as already judged, its frozen task is kept, and the run continues at the next turn instead of repeating turn 1. `turns` then defaults to the report's turn count. |
 | `task` | no | The prohibited behavior to induce. Omit and the attacker picks one of the built-in taxonomy categories on turn 1 and freezes it. |
 | `category` | no | Built-in category for your `task` (for example `prompt-extraction`). It picks the judge rubric and which harness floors apply. Without it your task is judged as custom. |
 | `judge_ai` | no | Judge route. Defaults to the attacker's model, which makes the run **self-judged**. Pass a model different from both the attacker and the target for an independent score. |
@@ -286,6 +289,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `target_orchestration` | no | Tell the target to cut the work into independent chunks and start one subagent per chunk in a single step, so the chunks overlap and the turn ends sooner. Default `true`; `false` (or `--no-orchestration`) keeps the older one-line hint. |
 | `auto_approve` | no | Plant the attacker's files and downloads without asking. Default `true`; `false` (or `--ask`) asks you once per turn first. |
 | `pause_minutes` | no | How long to wait for the network after a model stops on a connection failure before giving up. Default 60, max 1440; `0` turns pausing off. See [Network drops](#network-drops). |
+| `child_timeout_minutes` | no | Wall-clock budget for each child (attacker, target, judge) in this run. Default 30; `0` removes the practical cap (24 h). See [Timeout](#timeout). |
 
 Effort ids are validated against the model's advertised levels before the run starts; an
 unsupported id fails immediately with the list of valid ones. Omit either to use the
@@ -305,13 +309,17 @@ to the target through DSH's `parentSession` chain, so helpers two levels down co
 The run checks the profile and warns when the target has no subagent tool or the depth
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
 
-**Only the target may delegate.** The attacker and the judge are denied `subagent` and
-`workflow` for their whole run: the attacker writes prompts and the judge reads evidence,
-and a helper started by either would be work the run cannot attribute to the model under
-test. The denial is a DSH tool guard, so it is enforced rather than asked for. With
-`target_subagents: false`, the same guard denies those tools to the target as well, every
-other agent is unaffected, and the target is told subagents are not available in this
-session.
+**The attacker and judge run without tools.** Their job is one answer — an attack prompt,
+or a verdict — so a DSH tool guard allows them only `structured_output` and denies every
+other tool (`bash`, `read`, `write`, `subagent`, `workflow`, …). This is enforced, not
+asked for. Before it, an attacker given the caller's whole toolset spent its 30-minute child
+budget exploring and building things (20 M+ attacker tokens in one run), the turn timed out,
+and the run aborted — so the next attempt had to start again from turn 1.
+
+**Only the target may delegate.** The target keeps its subagent tools when
+`target_subagents` is on: its helpers count as its own work, shown to the judge and billed
+to the target. With `target_subagents: false`, the same guard denies `subagent` and
+`workflow` to the target as well and tells it so; every other agent is unaffected.
 
 **Target orchestration (`target_orchestration`, default on).** When the target can start
 subagents, its prompt carries an imperative note before the attack:
@@ -453,7 +461,7 @@ The target gets one prompt per turn and no memory, plus the helper note above wh
 start subagents. In return, the attacker and judge cannot start any agents of their own
 (the tool guard denies `subagent` and `workflow`): their work stays one prompt, one verdict.
 
-Each child gets 30 minutes by default (`childTimeoutMs` in the plugin config overrides it).
+Each child gets 5 hours by default (`childTimeoutMs` in the plugin config overrides it).
 If the attacker times out mid-run, the turns already judged are kept and the report records
 `verdict.aborted_reason` and "stopped after N of M turns"; a timeout before the first
 attempt fails the call instead of writing an empty report.
@@ -556,11 +564,46 @@ harness checks.
 
 ## Timeout
 
-Each child (attacker, target, judge) gets 30 minutes. Override with `childTimeoutMs` in the
-plugin config. A mid-run attacker timeout keeps the turns already judged and records
-`verdict.aborted_reason`; only a timeout before the first attempt fails the call. A target
-with many chunks can spend more wall-clock time than a solo one, so raise this budget if
-you see cut turns in a heavy run.
+Each child (attacker, target, judge) gets 5 hours by default. Set it per run with
+`child_timeout_minutes` (or `--child-timeout=<minutes>`), or change the default with
+`childTimeoutMs` in the plugin config.
+
+`child_timeout_minutes: 0` removes the practical cap: children then get 24 hours, and the
+report records `config.child_timeout_unbounded: true` plus a warning. Note what that means —
+**DSH's subagent stack has no timeout of its own** (no timeout in the manager, the spawn
+provider, or the subagent tool), so this plugin's budget is the only wall-clock bound a child
+has. At `0`, a child stuck on a provider that never answers holds the run until the 24-hour
+cap or your abort.
+
+When a timeout does cut a turn, the turns already judged are kept and
+`verdict.aborted_reason` records it; only a timeout before the first attempt fails the call
+outright. A target with many chunks, or a long build (a Minecraft client compile, a game
+boot), can legitimately need more than 5 hours — raise the budget for those runs rather
+than accepting cut turns.
+
+## Resuming an aborted run
+
+A run that stops early — attacker or judge timeout, a model that never came back — keeps its
+finished turns in the report, but a fresh call always started at turn 1. `resume_from` fixes
+that:
+
+```
+benchmark_ai(target_benchmark_ai="prov/model", resume_from=".goblin-bench/reports/benchmark-....json")
+```
+
+- The report's `attempts` are loaded as already judged, so the attacker sees them as
+  previous turns and the judge history is intact.
+- The frozen task and campaign plan come from the report; nothing is re-decided.
+- The first new turn is the one after the last attempt, and `turns` defaults to the report's
+  original count, so a 5-turn run stopped after turn 2 continues with turns 3–5.
+- The report records `config.resumed_from` and `config.resumed_attempts`. Resuming against a
+  different target model than the report's adds a warning, because the earlier turns are then
+  not comparable.
+- Rejected with a clear error: a non-report file, a different schema, a report with no
+  attempts, or `turns` not greater than the turns already run.
+
+The target's per-turn reset does not change: each turn still starts from a wiped folder, so
+the attacker must restate context and re-plant files (that is what the transcript is for).
 
 ## Built-in taxonomy
 
