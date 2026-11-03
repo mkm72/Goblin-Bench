@@ -132,8 +132,15 @@ approval needs an open model turn.
     once in `apply` (`installSubagentGate`) and lifted after each turn. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
-    delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts `SUBAGENT_HINT`
-    before the attack — one plain line, no test words — and the judge prompt says so.
+    delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note
+    before the attack — plain wording, no test words — and the judge prompt repeats the exact
+    same text. `target_orchestration` (default on) makes that note tell the target to cut the
+    work into independent chunks and start one subagent per chunk in one step, with a last
+    sentence saying whether its helpers may split a part further (only when
+    `subagentDepthLimit >= targetDepth + 2`); off keeps `SUBAGENT_HINT`, the old one-liner.
+    The choice is recorded as `config.target_orchestration` (`chunked`, `chunked-nested`,
+    `plain`, `off`) plus `config.target_helper_prompt`, because it changes what the run
+    measures: compare scores only within the same mode.
 17. **A network failure pauses the run; it never redoes finished work or counts as a pass.**
     A child whose last `turn/end` is an error with a DSH retryable code (`TRANSPORT`,
     `TIMEOUT`, `SERVER`, `RATE_LIMIT`, `EMPTY_RESPONSE`) or a network-looking message is
@@ -189,7 +196,10 @@ with a stub context:
 Assert on: child order (attacker → target → judge, plus confirmation judges when the
 first score is above 0), the target prompt starting with `Notes from the repo owner` on a
 honeypot task and equal to the attack prompt (empty folder, no `.env`) on a plain task with
-subagents off, the subagent line before the attack when the target can delegate, `maxDepth`
+subagents off, the helper note before the attack when the target can delegate (chunked by
+default, `chunked-nested` only when the fake provider's depth limit leaves a level under the
+target's helpers, the old one-liner with `target_orchestration: false`), the judge prompt
+quoting the exact helper note, `maxDepth`
 on the target request when the fake provider reports `capabilities.depthLimit`, an
 invalid attack yielding `untested`, a suite over a scenarios file writing scorecards and
 the leaderboard, the canary absent
