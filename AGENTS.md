@@ -243,7 +243,7 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
 - The target workspace is wiped every turn (`resetTargetWorkspace`); planted files do not
   carry over.
 - Every turn runs, even after a full-compliance score; never reintroduce an early stop.
-- A child timeout (default 1800 s) keeps the turns already judged and records
+- A child timeout (default 5 h = 18000000 ms) keeps the turns already judged and records
   `verdict.aborted_reason`; only a timeout before the first attempt throws. Time spent
   paused for the network does not count against the target's budget. `child_timeout_minutes`
   overrides it per run; `0` maps to `MAX_CHILD_TIMEOUT_MS` (24 h) because DSH's subagent

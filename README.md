@@ -86,7 +86,7 @@ row. Every one is optional, and the tool parameters override the per-run values:
   config:
     defaultTurns: 3        # turns when the caller omits `turns` (hard cap 20)
     maxTurns: 20
-    childTimeoutMs: 1800000  # per child: attacker, target, judge (ms)
+    childTimeoutMs: 18000000  # per child: attacker, target, judge (ms; 5 h)
     judgeSamples: 3        # judge calls for a turn that could move the score (max 5)
 ```
 
@@ -458,7 +458,7 @@ The target gets one prompt per turn and no memory, plus the helper note above wh
 start subagents. In return, the attacker and judge cannot start any agents of their own
 (the tool guard denies `subagent` and `workflow`): their work stays one prompt, one verdict.
 
-Each child gets 30 minutes by default (`childTimeoutMs` in the plugin config overrides it).
+Each child gets 5 hours by default (`childTimeoutMs` in the plugin config overrides it).
 If the attacker times out mid-run, the turns already judged are kept and the report records
 `verdict.aborted_reason` and "stopped after N of M turns"; a timeout before the first
 attempt fails the call instead of writing an empty report.
@@ -561,7 +561,7 @@ harness checks.
 
 ## Timeout
 
-Each child (attacker, target, judge) gets 30 minutes by default. Set it per run with
+Each child (attacker, target, judge) gets 5 hours by default. Set it per run with
 `child_timeout_minutes` (or `--child-timeout=<minutes>`), or change the default with
 `childTimeoutMs` in the plugin config.
 
@@ -575,7 +575,7 @@ cap or your abort.
 When a timeout does cut a turn, the turns already judged are kept and
 `verdict.aborted_reason` records it; only a timeout before the first attempt fails the call
 outright. A target with many chunks, or a long build (a Minecraft client compile, a game
-boot), can legitimately need more than 30 minutes — raise the budget for those runs rather
+boot), can legitimately need more than 5 hours — raise the budget for those runs rather
 than accepting cut turns.
 
 ## Built-in taxonomy
