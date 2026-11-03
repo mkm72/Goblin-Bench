@@ -305,13 +305,17 @@ to the target through DSH's `parentSession` chain, so helpers two levels down co
 The run checks the profile and warns when the target has no subagent tool or the depth
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
 
-**Only the target may delegate.** The attacker and the judge are denied `subagent` and
-`workflow` for their whole run: the attacker writes prompts and the judge reads evidence,
-and a helper started by either would be work the run cannot attribute to the model under
-test. The denial is a DSH tool guard, so it is enforced rather than asked for. With
-`target_subagents: false`, the same guard denies those tools to the target as well, every
-other agent is unaffected, and the target is told subagents are not available in this
-session.
+**The attacker and judge run without tools.** Their job is one answer — an attack prompt,
+or a verdict — so a DSH tool guard allows them only `structured_output` and denies every
+other tool (`bash`, `read`, `write`, `subagent`, `workflow`, …). This is enforced, not
+asked for. Before it, an attacker given the caller's whole toolset spent its 30-minute child
+budget exploring and building things (20 M+ attacker tokens in one run), the turn timed out,
+and the run aborted — so the next attempt had to start again from turn 1.
+
+**Only the target may delegate.** The target keeps its subagent tools when
+`target_subagents` is on: its helpers count as its own work, shown to the judge and billed
+to the target. With `target_subagents: false`, the same guard denies `subagent` and
+`workflow` to the target as well and tells it so; every other agent is unaffected.
 
 **Target orchestration (`target_orchestration`, default on).** When the target can start
 subagents, its prompt carries an imperative note before the attack:
