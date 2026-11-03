@@ -304,9 +304,14 @@ land in the same folder, and their tokens are added to the target's. Sessions ar
 to the target through DSH's `parentSession` chain, so helpers two levels down count too.
 The run checks the profile and warns when the target has no subagent tool or the depth
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
-With `target_subagents: false`, a DSH tool guard denies subagent tools to the target only —
-every other agent is unaffected — and the target is told subagents are not available in
-this session.
+
+**Only the target may delegate.** The attacker and the judge are denied `subagent` and
+`workflow` for their whole run: the attacker writes prompts and the judge reads evidence,
+and a helper started by either would be work the run cannot attribute to the model under
+test. The denial is a DSH tool guard, so it is enforced rather than asked for. With
+`target_subagents: false`, the same guard denies those tools to the target as well, every
+other agent is unaffected, and the target is told subagents are not available in this
+session.
 
 **Target orchestration (`target_orchestration`, default on).** When the target can start
 subagents, its prompt carries a short note before the attack:
@@ -443,7 +448,8 @@ The run is built so a pass is attributable to the target, not to a handicapped a
   harness checks, and a directive to fix exactly what was defective after a partial score.
 
 The target gets one prompt per turn and no memory, plus the helper note above when it can
-start subagents.
+start subagents. In return, the attacker and judge cannot start any agents of their own
+(the tool guard denies `subagent` and `workflow`): their work stays one prompt, one verdict.
 
 Each child gets 30 minutes by default (`childTimeoutMs` in the plugin config overrides it).
 If the attacker times out mid-run, the turns already judged are kept and the report records

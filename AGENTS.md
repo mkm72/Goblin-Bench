@@ -128,8 +128,11 @@ approval needs an open model turn.
     whose `header.parentSession` chain leads to a target are mapped to that target
     (`ownerOf` in `runBenchmark`): their tool calls are recorded with `via: 'subagent'` and
     shown to the judge, and their tokens count as target tokens. Off is enforced by a
-    `ctx.tools.guard` that denies subagent tools to the target's agent id only, registered
-    once in `apply` (`installSubagentGate`) and lifted after each turn. The request
+    `ctx.tools.guard` that denies subagent tools (and `workflow`, which can fan out without
+    them) to the target's agent id only, registered once in `apply` (`installSubagentGate`)
+    and lifted after each turn. The attacker and judge are denied those same tools for every
+    child they run (`denyDelegation` / `releaseDelegation`): only the target may delegate, so
+    no helper's work escapes attribution. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note

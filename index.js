@@ -2734,7 +2734,10 @@ function installSubagentGate(ctx) {
       ctx.tools.guard((exec) => {
         const id = exec?.agent?.id;
         if (id === undefined || !blocked.has(String(id))) return undefined;
-        if (!SUBAGENT_TOOL_PATTERN.test(String(exec.name ?? ''))) return undefined;
+        const name = String(exec.name ?? '');
+        // `workflow` is a fan-out engine, so it can start agents without the
+        // subagent tool; deny it wherever delegation is denied.
+        if (!SUBAGENT_TOOL_PATTERN.test(name) && name !== 'workflow') return undefined;
         return 'subagents are not available in this session; do the work directly';
       });
       available = true;
@@ -2901,8 +2904,10 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   if (pauseBudgetMs > 0 && typeof ctx.subagents?.sendMessage !== 'function') {
     warnings.push('this DSH cannot send a message to a stopped subagent, so a target cut off by a network failure cannot be told to continue; its turn is kept as it stopped');
   }
-  if (!allowSubagents && subagentGate?.available !== true) {
-    warnings.push('target_subagents is off, but this DSH has no tool guard, so the target may still start subagents');
+  if (subagentGate?.available !== true) {
+    warnings.push(allowSubagents
+      ? 'this DSH has no tool guard, so the attacker and judge can still start subagents'
+      : 'target_subagents is off, but this DSH has no tool guard, so the target may still start subagents');
   }
   if (targetCanSpawn && orchestrationOn && !targetNesting) {
     warnings.push(`the target can start subagents but its helpers cannot, so chunks stay one level deep; set maxDepth to ${targetDepth + 2} or more for @deepseek-ai/dsh-subagent to let a chunk be split again`);
@@ -3029,6 +3034,12 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   let bestTurn;
   let attackerUsage = emptyUsage();
   let judgeUsage = emptyUsage();
+  // Attacker and judge never delegate: only the target's helpers count as the
+  // work under test, so a helper they start would be unattributable work.
+  const denyDelegation = (childId) => subagentGate?.block(childId);
+  const releaseDelegation = (childIds) => {
+    for (const id of childIds ?? []) subagentGate?.unblock(id);
+  };
   let frozenTask;
   /** honeypot or plain; fixed once the task is frozen. */
   let runSetup;
@@ -3211,7 +3222,12 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
         signal: exec.signal,
         timeoutMs: childTimeoutMs,
         effort: mainEffort,
+        // Only the target may delegate: the attacker writes prompts, the judge
+        // reads evidence, and a helper started by either is work the run cannot
+        // attribute to the model under test.
+        onStart: denyDelegation,
       });
+      releaseDelegation(attackerStep.childIds);
       const attackerRun = attackerStep.run;
       if (exec.signal.aborted) throw new Error('Goblin Bench aborted by the caller');
       for (const id of attackerStep.childIds) attackerUsage = addUsage(attackerUsage, snapshotUsage(usageBySession, id));
@@ -3396,7 +3412,9 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
           signal: exec.signal,
           timeoutMs: childTimeoutMs,
           effort: effortFor(route),
+          onStart: denyDelegation,
         });
+        releaseDelegation(judgeStep.childIds);
         const judgeRun = judgeStep.run;
         if (judgeRun.aborted || exec.signal.aborted) throw new Error('Goblin Bench aborted by the caller');
         for (const id of judgeStep.childIds) judgeUsage = addUsage(judgeUsage, snapshotUsage(usageBySession, id));
