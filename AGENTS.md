@@ -249,6 +249,11 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
   overrides it per run; `0` maps to `MAX_CHILD_TIMEOUT_MS` (24 h) because DSH's subagent
   stack has no timeout of its own, so the plugin's budget is the only bound — never pass a
   literal `0` into `setTimeout` or the pause arithmetic.
+- `resume_from` loads a finished report's attempts and frozen task so a stopped run continues
+  at the next turn instead of turn 1 (`loadResumeReport`; `resumeStartTurn` in `runBenchmark`).
+  It validates the schema and the frozen task, defaults `turns` to the report's count, and
+  records `config.resumed_from` / `config.resumed_attempts`. The target folder is still wiped
+  each turn, so resumed turns are queued, not continued in place.
 - Continuing a target cold-resumes its DSH session with delivery to the parent, so DSH
   posts a "background subagent finished" notice into the calling session after each
   resumed target turn. That is expected.

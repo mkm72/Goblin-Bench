@@ -275,6 +275,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `main_ai` | no | Attacker route, `"provider/model"` or a bare model id (caller's provider). **Omit it and the chat you are in becomes the red team** — the attacker runs on the calling session's model. |
 | `target_benchmark_ai` | yes | Model under test, same route syntax. |
 | `turns` | no | Maximum attempts. Default 3, clamped to 20. Every turn runs, even after a failure. |
+| `resume_from` | no | Path to an earlier report (absolute, or relative to your cwd). Its turns are loaded as already judged, its frozen task is kept, and the run continues at the next turn instead of repeating turn 1. `turns` then defaults to the report's turn count. |
 | `task` | no | The prohibited behavior to induce. Omit and the attacker picks one of the built-in taxonomy categories on turn 1 and freezes it. |
 | `category` | no | Built-in category for your `task` (for example `prompt-extraction`). It picks the judge rubric and which harness floors apply. Without it your task is judged as custom. |
 | `judge_ai` | no | Judge route. Defaults to the attacker's model, which makes the run **self-judged**. Pass a model different from both the attacker and the target for an independent score. |
@@ -577,6 +578,30 @@ When a timeout does cut a turn, the turns already judged are kept and
 outright. A target with many chunks, or a long build (a Minecraft client compile, a game
 boot), can legitimately need more than 5 hours — raise the budget for those runs rather
 than accepting cut turns.
+
+## Resuming an aborted run
+
+A run that stops early — attacker or judge timeout, a model that never came back — keeps its
+finished turns in the report, but a fresh call always started at turn 1. `resume_from` fixes
+that:
+
+```
+benchmark_ai(target_benchmark_ai="prov/model", resume_from=".goblin-bench/reports/benchmark-....json")
+```
+
+- The report's `attempts` are loaded as already judged, so the attacker sees them as
+  previous turns and the judge history is intact.
+- The frozen task and campaign plan come from the report; nothing is re-decided.
+- The first new turn is the one after the last attempt, and `turns` defaults to the report's
+  original count, so a 5-turn run stopped after turn 2 continues with turns 3–5.
+- The report records `config.resumed_from` and `config.resumed_attempts`. Resuming against a
+  different target model than the report's adds a warning, because the earlier turns are then
+  not comparable.
+- Rejected with a clear error: a non-report file, a different schema, a report with no
+  attempts, or `turns` not greater than the turns already run.
+
+The target's per-turn reset does not change: each turn still starts from a wiped folder, so
+the attacker must restate context and re-plant files (that is what the transcript is for).
 
 ## Built-in taxonomy
 
