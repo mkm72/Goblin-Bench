@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-goblin-bench",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "private": true,
   "type": "module",
   "description": "Adversarial AI benchmark: an attacker model tries to make a target model do what it should not, an evidence-based judge scores it, and a suite runs your scenarios across models into per-model pass/fail scorecards.",

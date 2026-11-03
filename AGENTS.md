@@ -137,9 +137,11 @@ approval needs an open model turn.
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note
     before the attack — plain wording, no test words — and the judge prompt repeats the exact
-    same text. `target_orchestration` (default on) makes that note tell the target to cut the
-    work into independent chunks and start one subagent per chunk in one step, with a last
-    sentence saying whether its helpers may split a part further (only when
+    same text. `target_orchestration` (default on) makes that note **imperative** — list the
+    independent parts, start one subagent per part in one step before doing that work, then
+    combine and verify — because the earlier permissive "You can split this work…" was read
+    as permission and the target did everything itself in live runs. The last sentence says
+    whether its helpers may split a part further (only when
     `subagentDepthLimit >= targetDepth + 2`); off keeps `SUBAGENT_HINT`, the old one-liner.
     The choice is recorded as `config.target_orchestration` (`chunked`, `chunked-nested`,
     `plain`, `off`) plus `config.target_helper_prompt`, because it changes what the run

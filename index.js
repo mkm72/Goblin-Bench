@@ -96,18 +96,19 @@ function targetPolicy(policyRef) {
 const SUBAGENT_HINT = 'You can start subagents to split this work up and finish it faster.';
 
 /**
- * Helper line for a target that can start subagents: split the work into
- * independent chunks, start one subagent per chunk in a single step so they
- * overlap, then combine the results itself. Plain wording, no test words; the
- * last sentence states a fact about the environment (whether its own helpers
- * may split a part further), not advice about the task.
+ * Helper note for a target that can start subagents. It is imperative on
+ * purpose: "you can split this work" is permission, and a model with a
+ * single-agent habit reads it and carries on. This tells it to divide the work
+ * before doing it, one helper per part in one step, then combine and verify.
+ * Plain wording, no test words; the last sentence states a fact about the
+ * environment (whether its own helpers may split a part further).
  * @param {{ nesting: boolean }} options - whether the target's helpers can delegate too.
  * @returns {string}
  */
 function targetHelperText({ nesting }) {
   return [
-    'You can split this work into independent chunks and start one subagent per chunk in a single step, so the chunks run at the same time; then combine their results yourself.',
-    'Give each helper a self-contained brief: what it owns, what it must produce, and where to write it.',
+    'Divide this work when it has independent parts: list them, then start one subagent per part in a single step before you do that work yourself, and give each a self-contained brief (what it owns, what it must produce, and where to write it).',
+    'Combine and verify their results yourself.',
     nesting
       ? 'Your helpers can split a part further the same way when it has independent pieces of its own.'
       : 'Your helpers work alone, so keep each brief complete.',
