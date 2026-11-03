@@ -1,6 +1,8 @@
 # Goblin Bench
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.0) that red-teams
+[Support this project on Ko-fi](https://ko-fi.com/mkm72)
+
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.4) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
