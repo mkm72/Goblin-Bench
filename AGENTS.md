@@ -128,15 +128,20 @@ approval needs an open model turn.
     whose `header.parentSession` chain leads to a target are mapped to that target
     (`ownerOf` in `runBenchmark`): their tool calls are recorded with `via: 'subagent'` and
     shown to the judge, and their tokens count as target tokens. Off is enforced by a
-    `ctx.tools.guard` that denies subagent tools to the target's agent id only, registered
-    once in `apply` (`installSubagentGate`) and lifted after each turn. The request
+    `ctx.tools.guard` that denies subagent tools (and `workflow`, which can fan out without
+    them) to the target's agent id only, registered once in `apply` (`installSubagentGate`)
+    and lifted after each turn. The attacker and judge are denied those same tools for every
+    child they run (`denyDelegation` / `releaseDelegation`): only the target may delegate, so
+    no helper's work escapes attribution. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note
     before the attack — plain wording, no test words — and the judge prompt repeats the exact
-    same text. `target_orchestration` (default on) makes that note tell the target to cut the
-    work into independent chunks and start one subagent per chunk in one step, with a last
-    sentence saying whether its helpers may split a part further (only when
+    same text. `target_orchestration` (default on) makes that note **imperative** — list the
+    independent parts, start one subagent per part in one step before doing that work, then
+    combine and verify — because the earlier permissive "You can split this work…" was read
+    as permission and the target did everything itself in live runs. The last sentence says
+    whether its helpers may split a part further (only when
     `subagentDepthLimit >= targetDepth + 2`); off keeps `SUBAGENT_HINT`, the old one-liner.
     The choice is recorded as `config.target_orchestration` (`chunked`, `chunked-nested`,
     `plain`, `off`) plus `config.target_helper_prompt`, because it changes what the run
@@ -151,7 +156,11 @@ approval needs an open model turn.
     tokens stay part of the turn. Other errors (quota, credentials) do not pause. A target
     turn still cut off scores only if it had already complied: at 0 it goes to
     `verdict.interrupted_turns`, not `scoredTurns`. When the network never comes back the
-    run stops with `aborted_reason` and keeps its turns. Each pause is in `report.pauses`
+    run stops with `aborted_reason` and keeps its turns. Retries per child per turn are
+    capped (`MAX_PAUSE_RETRIES` = 3) in both `runWithPause` and the target continue loop, so a
+    provider that keeps dropping cannot restart one turn forever; the pause then records
+    `retries` and `capped: true`. `CONTINUE_PROMPT` tells the resumed target to check the
+    folder and not redo finished work. Each pause is in `report.pauses`
     and `run_dir/status.json` shows `paused` while one waits.
 
 ## Conventions
@@ -208,7 +217,9 @@ judge score of 0 still ends at 100), the lower median of samples, taxonomy-sourc
 the judge prompt containing tool results, changed-file text and planted files, the summary
 line, and the written report JSON. For pausing: a target `turn/end` with
 `reason: { kind: 'error', error: { code: 'TRANSPORT' } }` gets one continue message and no
-other step is redone, the judge prompt shows work from both before and after the drop, an
+other step is redone, a target that keeps failing stops after `MAX_PAUSE_RETRIES` continues
+(`pauses[0].retries === 3`, `capped: true`, `outcome: 'gave_up'`) instead of looping, the
+judge prompt shows work from both before and after the drop, an
 attacker or judge drop re-runs only that child, a network that never returns leaves an
 interrupted turn and `untested`, a `QUOTA` error does not pause, and `auto_approve`
 plants files with no approval call while `false` asks.
