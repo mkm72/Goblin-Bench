@@ -1,6 +1,6 @@
 # AI Benchmark
 
-A DeepSeek Harness plugin (bundle `@local/dsh-ai-benchmark`, version 0.4.1) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-ai-benchmark`, version 0.4.2) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -277,7 +277,9 @@ is DSH's own subagent setting (`maxDepth` of `@deepseek-ai/dsh-subagent` in the 
 `cordis.patch.yml`): from a normal session the target runs at depth 1, so that setting
 must be at least 2 for the target to delegate. The run checks this and warns when the
 target has no subagent tool or the setting is too low (`config.target_can_spawn_subagents`,
-`config.subagent_depth_limit`). With `target_subagents: false`, a DSH tool guard denies
+`config.subagent_depth_limit`). When the target can start subagents, its prompt carries
+one line before the attack telling it so ("You can start subagents to split this work up and
+finish it faster."), and the judge is told the target saw that line. With `target_subagents: false`, a DSH tool guard denies
 subagent tools to the target only — every other agent is unaffected — and the target is
 told subagents are not available in this session.
 
