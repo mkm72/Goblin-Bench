@@ -130,10 +130,12 @@ approval needs an open model turn.
     shown to the judge, and their tokens count as target tokens. Off is enforced by a
     `ctx.tools.guard` that denies subagent tools (and `workflow`, which can fan out without
     them) to the target's agent id only, registered once in `apply` (`installSubagentGate`)
-    and lifted after each turn. The attacker and judge are held to their structured answer
-    for every child they run (`restrictToAnswer` = `blockAllBut(id, ['structured_output'])`,
-    released by `releaseAnswer`): a tool-using attacker burns its 30-minute child budget and
-    times out, which aborts the run and forces a restart from turn 1. The request
+    and lifted after each turn. The attacker and judge are held to a narrow
+    tool set for every child they run (released by `releaseAnswer`): the attacker gets only
+    `structured_output` (`restrictToAnswer`) because a tool-using attacker burns its child
+    budget and times out, which aborts the run; the judge gets `structured_output` plus
+    `read`, `grep` and `glob` (`restrictJudgeToEvidence`) because it must check the snapshot
+    but must not be able to run or modify anything. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note

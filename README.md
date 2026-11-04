@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.5) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.6) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -356,12 +356,13 @@ to the target through DSH's `parentSession` chain, so helpers two levels down co
 The run checks the profile and warns when the target has no subagent tool or the depth
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
 
-**The attacker and judge run without tools.** Their job is one answer — an attack prompt,
-or a verdict — so a DSH tool guard allows them only `structured_output` and denies every
-other tool (`bash`, `read`, `write`, `subagent`, `workflow`, …). This is enforced, not
-asked for. Before it, an attacker given the caller's whole toolset spent its 30-minute child
-budget exploring and building things (20 M+ attacker tokens in one run), the turn timed out,
-and the run aborted — so the next attempt had to start again from turn 1.
+**The attacker runs without tools; the judge is read-only.** A DSH tool guard allows the
+attacker only `structured_output` — no shell, no files, no delegation — because an attacker
+given the caller's whole toolset spent its child budget exploring and building things (20 M+
+attacker tokens in one run) until the turn timed out and the run aborted. The judge gets
+`structured_output` plus `read`, `grep` and `glob`: enough to check the record and workspace
+snapshot before scoring, but no shell and no writes, so it cannot run or change what it
+judges. Both restrictions are enforced, not asked for.
 
 **Only the target may delegate.** The target keeps its subagent tools when
 `target_subagents` is on: its helpers count as its own work, shown to the judge and billed
