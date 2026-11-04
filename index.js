@@ -2837,6 +2837,32 @@ function readOrchestrationFlag(value) {
   return readOnFlag(value, 'target_orchestration');
 }
 
+/** Directory prefix used for every run folder: `runs/run-1`, `runs/run-2`, … */
+const RUN_DIR_PREFIX = 'run';
+
+/**
+ * Claim the next free incremental run folder (`run-1`, `run-2`, …) so a human
+ * can find a run without a UUID. `mkdir` without `recursive` is the claim: it
+ * fails with EEXIST, which is the only way two concurrent runs stay apart.
+ * @param {string} cwd - caller working directory.
+ * @returns {Promise<{ name: string, path: string }>}
+ */
+async function claimRunDir(cwd) {
+  const root = join(cwd, '.goblin-bench', 'runs');
+  await mkdir(root, { recursive: true });
+  for (let index = 1; index <= 100_000; index += 1) {
+    const name = `${RUN_DIR_PREFIX}-${index}`;
+    const path = join(root, name);
+    try {
+      await mkdir(path);
+      return { name, path };
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+    }
+  }
+  throw new Error('could not allocate a run folder under .goblin-bench/runs');
+}
+
 /**
  * Load the attempts and frozen task of a finished run, so a new call can
  * continue it instead of repeating the turns already judged.
@@ -3022,8 +3048,9 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
     warnings.push('delegation-abuse measures subagent use, but the target cannot start subagents in this run, so a pass proves little');
   }
 
-  const runId = randomUUID();
-  const runDir = join(parentCwd, '.goblin-bench', 'runs', runId);
+  const claimedRun = await claimRunDir(parentCwd);
+  const runId = claimedRun.name;
+  const runDir = claimedRun.path;
   const roleDirs = {
     main_ai: join(runDir, 'main_ai'),
     target: join(runDir, 'target'),
@@ -4027,19 +4054,24 @@ export function apply(ctx, config) {
   // The `/` menu lists the command registry, not tools. Register a command so the
   // benchmark is discoverable there; it dispatches the same tool.
   ctx.inject(['commands'], (commandCtx) => {
-    commandCtx.effect(() => commandCtx.commands.register({
-      definitionId: '@local/dsh-goblin-bench',
-      name: 'benchmark',
+    const benchmarkCommand = (name) => ({
+      definitionId: `@local/dsh-goblin-bench/${name}`,
+      name,
       description: 'Run the AI-safety benchmark against a target model',
       input: { hint: '<target-model> [turns] [task...]' },
       handler: (invocation) => runBenchmarkCommand(ctx, invocation),
-    }));
-    commandCtx.effect(() => commandCtx.commands.register({
-      definitionId: '@local/dsh-goblin-bench/suite',
-      name: 'benchmark-suite',
+    });
+    commandCtx.effect(() => commandCtx.commands.register(benchmarkCommand('benchmark')));
+    // The tool is `benchmark_ai`, so people type that name too.
+    commandCtx.effect(() => commandCtx.commands.register(benchmarkCommand('benchmark_ai')));
+    const suiteCommand = (name) => ({
+      definitionId: `@local/dsh-goblin-bench/${name}`,
+      name,
       description: 'Run your scenarios against several models and write a scorecard per model',
       input: { hint: '<model[,model...]> --scenarios=<file> [--trials=n] [--turns=n] [--judge=<model>]' },
       handler: (invocation) => runSuiteCommand(ctx, invocation),
-    }));
+    });
+    commandCtx.effect(() => commandCtx.commands.register(suiteCommand('benchmark-suite')));
+    commandCtx.effect(() => commandCtx.commands.register(suiteCommand('benchmark_suite')));
   });
 }

@@ -41,14 +41,14 @@ scripts/run-suite.sh  unattended suite run through the DSH headless profile
 Per suite, it writes `.goblin-bench/suites/<stamp>-<id>/` with `scorecards/<model>.json|.md`,
 `leaderboard.md`, `leaderboard.csv`, `scenarios.json` and `suite.json`.
 
-Per run, the plugin writes `.goblin-bench/runs/<run-id>/` with `main_ai/`, `target/` and
+Per run, the plugin writes `.goblin-bench/runs/run-N/` (numbered in launch order, claimed with an exclusive `mkdir`) with `main_ai/`, `target/` and
 `judge/` folders (per-turn prompts, outputs, and workspace snapshots) and zips them into
 `main_ai.zip`, `target_ai.zip` and `judge.zip` at the end.
 
 ## Entry points
 
 `benchmark_ai` and `benchmark_suite` are the model-facing tools; `/benchmark` and
-`/benchmark-suite` are the human-facing commands. `/benchmark` is the command
+`/benchmark-suite` are the human-facing commands. `/benchmark` (alias `/benchmark_ai`) is the command
 registered through `ctx.inject(['commands'], ...)` (optional — headless profiles
 without the command service still load the plugin). The command parses
 `<target> [turns] [task]` and dispatches the same tool via `ctx.tools.execute`, so
@@ -176,6 +176,14 @@ approval needs an open model turn.
   report contract changes incompatibly.
 - User-facing strings in `locale/*.json` and the tool description are prose, not notes;
   keep them accurate when behavior changes.
+- **Release branches.** A new major or minor version (0.9.0, 1.0.0, …) gets its **own new
+  branch**, created from the current release branch, pushed to `origin`, and named
+  `v<major>.<minor>.0` — e.g. `git switch -c v0.9.0 && git push -u origin v0.9.0`. A small
+  bug fix (a patch bump like 0.8.5) stays on the current branch: **rename it** so the branch
+  name matches the newest patch — `git branch -m v0.8.0 v0.8.5`, `git push -u origin v0.8.5`,
+  then `git push origin --delete v0.8.0` (deleting the old remote ref closes any PR opened
+  from it, so check for one first). Bump `package.json` and the README's version line in the
+  same commit as the version change.
 
 ## Testing
 

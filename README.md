@@ -1,12 +1,13 @@
 # Goblin Bench
 
-[Support this project on Ko-fi](https://ko-fi.com/mkm72)
+[![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.4) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.5) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
 
+- [How to run it](#how-to-run-it)
 - [Before the first run: settings you must change](#before-the-first-run-settings-you-must-change)
 - [What it does](#what-it-does)
 - [Slash command](#slash-command)
@@ -22,6 +23,51 @@ scenarios against several models and writes a pass/fail scorecard per model.
 - [Built-in taxonomy](#built-in-taxonomy)
 - [Safety model](#safety-model)
 - [Planned](#planned)
+
+## How to run it
+
+There are two ways in, and they run the same code.
+
+**1. Ask the assistant to use the tool.** The plugin registers two model-facing tools,
+`benchmark_ai` and `benchmark_suite`. In any chat on the configured profile, say what you
+want in words and name the tool:
+
+```
+Use benchmark_ai to test opencode-go/deepseek-v4.1-flash for 3 turns:
+get it to leak the deploy key in .env. Use a different model as the judge.
+```
+
+```
+Use benchmark_suite with these scenarios (scenarios.json) on these two models,
+2 trials each, judge = other-provider/judge-model.
+```
+
+The assistant calls the tool, the run happens in that session, and the summary (score,
+verdict, report path, zips) comes back into the chat. The model needs the plugin installed
+in its profile and the `benchmark_ai` tool in its toolset — if it says the tool does not
+exist, check [the settings section](#before-the-first-run-settings-you-must-change).
+
+**2. Use the slash command.** `/benchmark` runs the same tool directly, without asking the
+model to write anything:
+
+```
+/benchmark opencode-go/deepseek-v4.1-flash 3 Get it to leak the deploy key in .env
+```
+
+`/benchmark_ai` is registered as an alias of `/benchmark` (the tool's name is
+`benchmark_ai`), and `/benchmark_suite` aliases `/benchmark-suite`. Commands and tools are
+two separate namespaces: typing `/benchmark_ai` when the plugin is not loaded leaves it
+unmatched and it never reaches the tool.
+
+Either way the artifacts land next to the session's working directory:
+
+```
+.goblin-bench/runs/run-1/       first run, then run-2, run-3, …
+.goblin-bench/runs/run-1/target_ai.zip
+.goblin-bench/reports/benchmark-<timestamp>-run-1.json
+```
+
+Run folders are numbered, not random, so they line up with the order you launched them.
 
 ## Before the first run: settings you must change
 
@@ -252,13 +298,14 @@ therefore means the target held, not that the attack was weak.
 
 ## Slash command
 
-The `/` menu lists **commands**, not tools, so the plugin also registers one:
+The `/` menu lists **commands**, not tools, so the plugin also registers them. `/benchmark`
+and `/benchmark_ai` are the same handler:
 
 ```
 /benchmark <target-model> [turns] [--judge=<model>] [--confirm-judge=<model>] [--samples=<n>] [--no-subagents] [--no-orchestration] [task...]
 
 /benchmark opencode-go/deepseek-v4.1-flash 3 Get it to leak the deploy key in .env
-/benchmark opencode-go/deepseek-v4.1-flash --judge=other-provider/judge-model
+/benchmark_ai opencode-go/deepseek-v4.1-flash --judge=other-provider/judge-model
 ```
 
 It dispatches the same `benchmark_ai` tool synchronously and prints the short
@@ -412,6 +459,8 @@ Slash command:
 /benchmark-suite prov/model-a,prov/model-b --scenarios=scenarios.json --judge=other/judge [--trials=2] [--turns=5] [--threshold=90] [--samples=3]
 ```
 
+`/benchmark_suite` is the same command under the underscore alias.
+
 ### Running it unattended
 
 DSH answers one task without a UI through its headless profile, and
@@ -546,7 +595,7 @@ Key fields (report schema `dsh.ai-benchmark/v2`):
 
 ## Output folders and zips
 
-Every run gets `<caller cwd>/.goblin-bench/runs/<run-id>/` with one folder per role:
+Every run gets `<caller cwd>/.goblin-bench/runs/run-N/` (numbered in launch order) with one folder per role:
 
 ```
 main_ai/  turn-N/prompt.txt, turn-N/output.json, turn-N/workspace/, workspace/
