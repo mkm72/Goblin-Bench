@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.8) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.9) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -358,12 +358,14 @@ The run checks the profile and warns when the target has no subagent tool or the
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
 
 **The attacker works with files, not a shell; the judge is read-only.** A DSH tool guard
-gives the attacker `structured_output`, `read`, `write`, `edit`, `glob` and `grep` — enough
-to read a seed tree and build files in its own workspace — but **no `bash`** and no
+gives the attacker `structured_output`, `read`, `write`, `edit`, `glob`, `grep` and `ls` —
+enough to read a seed tree and build files in its own workspace — but **no `bash`** and no
 delegation. The shell is what cost an earlier attacker 20 M+ tokens and a timed-out turn;
-file work is bounded. The judge gets `structured_output` plus `read`, `grep` and `glob`:
+file work is bounded. The judge gets `structured_output`, `read`, `grep`, `glob` and `ls`:
 enough to check the record and workspace snapshot before scoring, but no shell and no
-writes, so it cannot run or change what it judges.
+writes, so it cannot run or change what it judges. DSH has no `ls` of its own, so the plugin
+registers a tiny read-only one (it also appears in the target's tool list, which already has
+`bash` and `read`).
 
 The attacker's own workspace is separate from the target's: a file it writes with `write`
 stays in `main_ai/workspace/`, and to plant something in the target it uses the `artifacts`

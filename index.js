@@ -2746,6 +2746,66 @@ async function runSuite(ctx, limits, input, exec) {
 }
 
 /**
+ * Read-only directory listing. DSH ships `read`, `glob` and `grep` but no `ls`,
+ * and both the attacker and the judge need to see what is in a folder before
+ * reading anything. Registered globally; the guard decides who may call it.
+ */
+const LS_TOOL = {
+  name: 'ls',
+  description: 'List a directory: entry names, dir/file type and size, sorted. Read-only, no shell.',
+  parameters: {
+    type: 'object',
+    properties: {
+      path: { type: 'string', description: 'Directory to list. Defaults to the current working directory.' },
+    },
+    additionalProperties: false,
+  },
+  output: {
+    schema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string' },
+        entries: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              type: { type: 'string' },
+              size: { type: 'integer' },
+            },
+            required: ['name', 'type'],
+          },
+        },
+      },
+      required: ['path', 'entries'],
+    },
+    render: (_args, value) => [{
+      type: 'text',
+      text: value.entries.length === 0
+        ? `${value.path}: (empty)`
+        : `${value.path}:\n${value.entries.map((entry) => `${entry.type === 'dir' ? 'd' : '-'} ${entry.size === undefined ? '' : entry.size} ${entry.name}${entry.type === 'dir' ? '/' : ''}`).join('\n')}`,
+    }],
+  },
+  async execute(args, exec) {
+    const base = exec?.agent?.session?.header?.cwd ?? process.cwd();
+    const raw = typeof args?.path === 'string' && args.path.trim().length > 0 ? args.path.trim() : '.';
+    const target = isAbsolute(raw) ? raw : join(base, raw);
+    const dirents = await readdir(target, { withFileTypes: true });
+    const entries = [];
+    for (const dirent of dirents.sort((left, right) => left.name.localeCompare(right.name)).slice(0, 500)) {
+      if (dirent.isDirectory()) entries.push({ name: dirent.name, type: 'dir' });
+      else if (dirent.isFile()) {
+        let size;
+        try { size = (await stat(join(target, dirent.name))).size; } catch { size = undefined; }
+        entries.push({ name: dirent.name, type: 'file', ...(size === undefined ? {} : { size }) });
+      } else entries.push({ name: dirent.name, type: dirent.isSymbolicLink() ? 'link' : 'other' });
+    }
+    return { path: target, entries };
+  },
+};
+
+/**
  * A tool guard that narrows what chosen agents may run. Two modes: `block`
  * denies delegation tools (so a run can turn the target's subagents off without
  * touching any other agent), and `blockAllBut` denies every tool except an
@@ -3186,8 +3246,8 @@ async function runBenchmark(ctx, limits, input, exec, meta = {}) {
   // The attacker writes one prompt and its shells are what burned a whole child
   // budget; the judge may only READ evidence, so a shell cannot mutate what it
   // judges. `extra_tools` lets an operator widen either list deliberately.
-  const ATTACKER_TOOLS = ['structured_output', 'read', 'write', 'edit', 'glob', 'grep', ...extraTools];
-  const JUDGE_TOOLS = ['structured_output', 'read', 'grep', 'glob', ...extraTools];
+  const ATTACKER_TOOLS = ['structured_output', 'read', 'write', 'edit', 'glob', 'grep', 'ls', ...extraTools];
+  const JUDGE_TOOLS = ['structured_output', 'read', 'grep', 'glob', 'ls', ...extraTools];
   const restrictToAnswer = (childId) => subagentGate?.blockAllBut(
     childId,
     ATTACKER_TOOLS,
@@ -4011,6 +4071,8 @@ export function apply(ctx, config) {
   };
 
   ctx.effect(() => ctx.tools.register(definition));
+  // The listing tool is global; the guard limits it to the roles that may read.
+  ctx.effect(() => ctx.tools.register(LS_TOOL));
 
   const suiteDefinition = {
     name: 'benchmark_suite',

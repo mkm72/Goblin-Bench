@@ -132,11 +132,12 @@ approval needs an open model turn.
     them) to the target's agent id only, registered once in `apply` (`installSubagentGate`)
     and lifted after each turn. The attacker and judge are held to a narrow
     tool set for every child they run (released by `releaseAnswer`): the attacker gets
-    `structured_output`, `read`, `write`, `edit`, `glob` and `grep` but no `bash` and no
-    delegation (`restrictToAnswer`) — the shell is what burned a whole child budget and
-    aborted the run; the judge gets `structured_output` plus `read`, `grep` and `glob`
+    `structured_output`, `read`, `write`, `edit`, `glob`, `grep` and `ls` but no `bash` and
+    no delegation (`restrictToAnswer`) — the shell is what burned a whole child budget and
+    aborted the run; the judge gets `structured_output` plus `read`, `grep`, `glob` and `ls`
     (`restrictJudgeToEvidence`) because it must check the snapshot but must not be able to
-    run or modify anything. `extra_tools` (default none) is appended to both allow-lists so
+    run or modify anything. DSH has no `ls` tool, so the plugin registers a read-only one (`LS_TOOL`) and
+    both lists name it. `extra_tools` (default none) is appended to both allow-lists so
     an operator can hand either role another plugin's tool; unknown names warn and are
     recorded in `config.extra_tools`. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
