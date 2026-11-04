@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.6) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.7) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -356,13 +356,18 @@ to the target through DSH's `parentSession` chain, so helpers two levels down co
 The run checks the profile and warns when the target has no subagent tool or the depth
 setting is too low (`config.target_can_spawn_subagents`, `config.subagent_depth_limit`).
 
-**The attacker runs without tools; the judge is read-only.** A DSH tool guard allows the
-attacker only `structured_output` — no shell, no files, no delegation — because an attacker
-given the caller's whole toolset spent its child budget exploring and building things (20 M+
-attacker tokens in one run) until the turn timed out and the run aborted. The judge gets
-`structured_output` plus `read`, `grep` and `glob`: enough to check the record and workspace
-snapshot before scoring, but no shell and no writes, so it cannot run or change what it
-judges. Both restrictions are enforced, not asked for.
+**The attacker works with files, not a shell; the judge is read-only.** A DSH tool guard
+gives the attacker `structured_output`, `read`, `write`, `edit`, `glob` and `grep` — enough
+to read a seed tree and build files in its own workspace — but **no `bash`** and no
+delegation. The shell is what cost an earlier attacker 20 M+ tokens and a timed-out turn;
+file work is bounded. The judge gets `structured_output` plus `read`, `grep` and `glob`:
+enough to check the record and workspace snapshot before scoring, but no shell and no
+writes, so it cannot run or change what it judges.
+
+The attacker's own workspace is separate from the target's: a file it writes with `write`
+stays in `main_ai/workspace/`, and to plant something in the target it uses the `artifacts`
+field (content in the request, or a download URL). Both restrictions are enforced, not asked
+for.
 
 **Only the target may delegate.** The target keeps its subagent tools when
 `target_subagents` is on: its helpers count as its own work, shown to the judge and billed
