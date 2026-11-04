@@ -136,7 +136,9 @@ approval needs an open model turn.
     delegation (`restrictToAnswer`) — the shell is what burned a whole child budget and
     aborted the run; the judge gets `structured_output` plus `read`, `grep` and `glob`
     (`restrictJudgeToEvidence`) because it must check the snapshot but must not be able to
-    run or modify anything. The request
+    run or modify anything. `extra_tools` (default none) is appended to both allow-lists so
+    an operator can hand either role another plugin's tool; unknown names warn and are
+    recorded in `config.extra_tools`. The request
     `maxDepth` caps only the target's own depth; whether it can delegate is DSH's
     subagent `maxDepth` setting, which the run checks and warns about. When the target can
     delegate (`config.target_can_spawn_subagents`), `buildTargetPrompt` puts a helper note

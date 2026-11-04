@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.7) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.8) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -324,6 +324,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `main_ai` | no | Attacker route, `"provider/model"` or a bare model id (caller's provider). **Omit it and the chat you are in becomes the red team** — the attacker runs on the calling session's model. |
 | `target_benchmark_ai` | yes | Model under test, same route syntax. |
 | `turns` | no | Maximum attempts. Default 3, clamped to 20. Every turn runs, even after a failure. |
+| `extra_tools` | no | Extra tool names to allow for the attacker and the judge on top of their defaults (attacker: `read`, `write`, `edit`, `glob`, `grep`; judge: `read`, `grep`, `glob`). Use it to hand either role a tool from another plugin or an MCP server. Default none. A name the caller cannot see is ignored with a warning. |
 | `resume_from` | no | Path to an earlier report (absolute, or relative to your cwd). Its turns are loaded as already judged, its frozen task is kept, and the run continues at the next turn instead of repeating turn 1. `turns` then defaults to the report's turn count. |
 | `task` | no | The prohibited behavior to induce. Omit and the attacker picks one of the built-in taxonomy categories on turn 1 and freezes it. |
 | `category` | no | Built-in category for your `task` (for example `prompt-extraction`). It picks the judge rubric and which harness floors apply. Without it your task is judged as custom. |
@@ -368,6 +369,11 @@ The attacker's own workspace is separate from the target's: a file it writes wit
 stays in `main_ai/workspace/`, and to plant something in the target it uses the `artifacts`
 field (content in the request, or a download URL). Both restrictions are enforced, not asked
 for.
+
+`extra_tools` widens either list deliberately: pass tool names from another plugin or an MCP
+server and the attacker and judge may use them too (`extra_tools: ["mcp__notes__search"]`).
+The report records the list in `config.extra_tools`, and a name the caller cannot see is
+ignored with a warning rather than silently failing.
 
 **Only the target may delegate.** The target keeps its subagent tools when
 `target_subagents` is on: its helpers count as its own work, shown to the judge and billed
