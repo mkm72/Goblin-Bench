@@ -41,14 +41,14 @@ scripts/run-suite.sh  unattended suite run through the DSH headless profile
 Per suite, it writes `.goblin-bench/suites/<stamp>-<id>/` with `scorecards/<model>.json|.md`,
 `leaderboard.md`, `leaderboard.csv`, `scenarios.json` and `suite.json`.
 
-Per run, the plugin writes `.goblin-bench/runs/<run-id>/` with `main_ai/`, `target/` and
+Per run, the plugin writes `.goblin-bench/runs/run-N/` (numbered in launch order, claimed with an exclusive `mkdir`) with `main_ai/`, `target/` and
 `judge/` folders (per-turn prompts, outputs, and workspace snapshots) and zips them into
 `main_ai.zip`, `target_ai.zip` and `judge.zip` at the end.
 
 ## Entry points
 
 `benchmark_ai` and `benchmark_suite` are the model-facing tools; `/benchmark` and
-`/benchmark-suite` are the human-facing commands. `/benchmark` is the command
+`/benchmark-suite` are the human-facing commands. `/benchmark` (alias `/benchmark_ai`) is the command
 registered through `ctx.inject(['commands'], ...)` (optional — headless profiles
 without the command service still load the plugin). The command parses
 `<target> [turns] [task]` and dispatches the same tool via `ctx.tools.execute`, so
