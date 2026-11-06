@@ -1,0 +1,4 @@
+# Telegram bridge: mounts the operator-channel tools and the reply poller.
+- insert:
+    - id: telegram
+      name: '@local/dsh-telegram'

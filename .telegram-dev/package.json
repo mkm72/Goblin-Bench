@@ -1,0 +1,22 @@
+{
+  "name": "@local/dsh-telegram",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Two-way Telegram operator channel for DeepSeek Harness: agents message you, you reply, and the bot is configured from chat.",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "AGENTS.md"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
