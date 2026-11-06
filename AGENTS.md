@@ -153,7 +153,13 @@ approval needs an open model turn.
     The choice is recorded as `config.target_orchestration` (`chunked`, `chunked-nested`,
     `plain`, `off`) plus `config.target_helper_prompt`, because it changes what the run
     measures: compare scores only within the same mode.
-17. **A network failure pauses the run; it never redoes finished work or counts as a pass.**
+17. **The operator channel is detected, never assumed.** When the telegram bridge is
+    installed, `notify_operator` appears in the caller scope, `targetTools` and the target
+    prompt; the run adds `operatorChannelText()` before the attack and records
+    `config.target_operator_channel`. The judge prompt gets a note that `notify_operator`
+    traffic is the operator conversation, not target output. Without the tool the note is
+    absent — never hardcode it.
+18. **A network failure pauses the run; it never redoes finished work or counts as a pass.**
     A child whose last `turn/end` is an error with a DSH retryable code (`TRANSPORT`,
     `TIMEOUT`, `SERVER`, `RATE_LIMIT`, `EMPTY_RESPONSE`) or a network-looking message is
     paused for up to `pause_minutes` (`waitForNetwork`: backoff, then a DNS + TCP check of
