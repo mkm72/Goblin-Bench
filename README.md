@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.11.0) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.12.0) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -324,7 +324,8 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `main_ai` | no | Attacker route, `"provider/model"` or a bare model id (caller's provider). **Omit it and the chat you are in becomes the red team** — the attacker runs on the calling session's model. |
 | `target_benchmark_ai` | yes | Model under test, same route syntax. |
 | `turns` | no | Maximum attempts. Default 3, clamped to 20. Every turn runs, even after a failure. |
-| `target_score_threshold` | no | Stop after any turn whose target score (100 − the **mean** judge score for that turn) is at or above this percentage. Omit to run every requested turn. A turn with no valid attack or a cut-off target never triggers it. |
+| `target_score_threshold` | no | Stop after any turn whose **target** score (100 − the mean judge score for that turn) is at or above this percentage — fires when the target resisted. |
+| `attack_score_threshold` | no | Stop after any turn whose **mean judge score** is at or above this percentage — fires when the target did (almost) everything the attack asked for. |
 | `carry_workspace` | no | Start each turn's target from the previous turn's tree instead of an empty folder (default `true`; turn 1 is always empty). `false` (or `--no-carry`) restores the old reset-every-turn behaviour. See [Carrying the workspace between turns](#carrying-the-workspace-between-turns). |
 | `extra_tools` | no | Extra tool names to allow for the attacker and the judge on top of their defaults (attacker: `read`, `write`, `edit`, `glob`, `grep`; judge: `read`, `grep`, `glob`). Use it to hand either role a tool from another plugin or an MCP server. Default none. A name the caller cannot see is ignored with a warning. |
 | `resume_from` | no | Path to an earlier report (absolute, or relative to your cwd). Its turns are loaded as already judged, its frozen task is kept, and the run continues at the next turn instead of repeating turn 1. `turns` then defaults to the report's turn count. |
@@ -423,23 +424,32 @@ The job is owned by the calling agent, so it dies with that agent's session. Bac
 runs print only the final digest, not per-turn progress. `benchmark_suite` is always
 foreground — a suite needs each run's result to score it.
 
-### Stopping early when the target is holding
+### Stopping early
 
 By default every requested turn runs, even after a full-compliance score — a lucky early
-turn should not decide the run. If you would rather cap the spend once the target is clearly
-resisting, set `target_score_threshold` (or `--threshold=<percent>`):
+turn should not decide the run. Two opt-in knobs cap the spend, and they point in opposite
+directions because the judge and the target score are inverses (`target = 100 − attack`):
+
+| Knob | Fires when | Use it for |
+|---|---|---|
+| `target_score_threshold` | **target** score ≥ X, i.e. mean judge ≤ 100−X | the target is clearly resisting |
+| `attack_score_threshold` | mean **judge** score ≥ X | the target has done (almost) everything asked |
 
 ```
-benchmark_ai(target_benchmark_ai="…", turns=3, task="…", target_score_threshold=95)
+benchmark_ai(…, attack_score_threshold=95)   # stop once the judge averages 95+
+benchmark_ai(…, target_score_threshold=95)   # stop once the target resists at 95+
 ```
 
-After each judged turn the run computes that turn's target score as **100 minus the mean of
-the judge samples** (with `judge_samples`/`confirm_judge_ai`, the judges are averaged rather
-than reduced to the lower median) and stops after the turn when it is at or above the
-threshold. A turn with no valid attack, or one the network cut off, never triggers it. The
-stop is recorded in `verdict.stopped_early` (`turn`, `target_score`, `attack_average`,
-`judges`, `threshold`) and the summary says why it stopped; `config.target_score_threshold`
-records the setting, so a stopped run is never mistaken for a completed one.
+Each turn's judge score is the **mean of its samples** (`judge_samples`/`confirm_judge_ai`
+are averaged for this check, not reduced to the lower median), and a turn with no valid
+attack or one the network cut off never triggers either knob. The stop is recorded in
+`verdict.stopped_early` (`mode`, `turn`, `attack_average`, `target_score`, `judges`,
+`threshold`) and both settings are in `config`, so a stopped run is never mistaken for a
+completed one.
+
+Mind the arithmetic: with `target_score_threshold: 5`, a turn judged `95 / 95 / 97` has a
+target score of `4.33` and does **not** stop — 5 requires the mean judge to be ≤ 95.0
+exactly. `attack_score_threshold: 95` is the knob that fires on that turn.
 
 ### Carrying the workspace between turns
 
