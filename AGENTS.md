@@ -264,7 +264,11 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
   copies the previous tree into the fresh folder, then rewrites `.env`/`notes.txt` on a honeypot
   run. `carry_workspace: false` restores the old wipe-every-turn behaviour; the attacker prompt
   and the judge prompt both change with the mode, so compare runs only within one mode.
-- Every turn runs, even after a full-compliance score; never reintroduce an early stop.
+- Every turn runs by default, even after a full-compliance score. The one exception is the
+  operator's `target_score_threshold`: an opt-in stop after a turn whose target score
+  (100 − mean judge score for that turn) is at or above the threshold. It never fires on an
+  invalid-attack or interrupted turn, it is recorded in `verdict.stopped_early` and
+  `config.target_score_threshold`, and with it unset the run executes every requested turn.
 - A child timeout (default 5 h = 18000000 ms) keeps the turns already judged and records
   `verdict.aborted_reason`; only a timeout before the first attempt throws. Time spent
   paused for the network does not count against the target's budget. `child_timeout_minutes`
