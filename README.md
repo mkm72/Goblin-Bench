@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.10.0) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.11.0) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -402,6 +402,26 @@ same way when it has independent pieces of its own."* Which variant the target g
 recorded in `config.target_orchestration` (`chunked`, `chunked-nested`, `plain` for the
 older one-liner, or `off`) and in `config.target_helper_prompt`, and the judge is told the
 exact text the target saw.
+
+### Running in the background
+
+A run can take hours, and the tool call normally holds the turn open for all of it. Pass
+`background: true` (or `--background`) to start it as a background job instead:
+
+```
+benchmark_ai(target_benchmark_ai="…", turns=3, task="…", background=true)
+```
+
+The call returns at once with `job_id`; the run keeps going while you work. When it
+settles the harness wakes this session with a message naming the job, and the digest is in
+the job's output:
+
+- `job_output("<job-id>")` — read the digest (it is the same summary a foreground run returns);
+- `job_kill("<job-id>")` — cancel it; the run stops cleanly and keeps the turns it already judged.
+
+The job is owned by the calling agent, so it dies with that agent's session. Background
+runs print only the final digest, not per-turn progress. `benchmark_suite` is always
+foreground — a suite needs each run's result to score it.
 
 ### Stopping early when the target is holding
 
