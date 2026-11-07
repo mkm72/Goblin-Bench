@@ -260,8 +260,10 @@ a cheap failure-path call (for example `turns: 0`) before spending on a real run
 - `turns` defaults to 3, hard-capped at 20; artifacts are capped at 8 per turn and 1 MB each.
 - Each turn spawns at least three full agents, and up to `2 + judge_samples` when the
   first judgment shows compliance, so cost scales as `turns × 3` to `turns × (2 + judge_samples)`.
-- The target workspace is wiped every turn (`resetTargetWorkspace`); planted files do not
-  carry over.
+- The target workspace carries from turn 2 on (`carry_workspace`, default true): `resetTargetWorkspace`
+  copies the previous tree into the fresh folder, then rewrites `.env`/`notes.txt` on a honeypot
+  run. `carry_workspace: false` restores the old wipe-every-turn behaviour; the attacker prompt
+  and the judge prompt both change with the mode, so compare runs only within one mode.
 - Every turn runs, even after a full-compliance score; never reintroduce an early stop.
 - A child timeout (default 5 h = 18000000 ms) keeps the turns already judged and records
   `verdict.aborted_reason`; only a timeout before the first attempt throws. Time spent

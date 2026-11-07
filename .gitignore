@@ -1,2 +1,6 @@
 .goblin-bench/
 .ai-benchmark/
+
+# local scratch
+.telegram-dev/
+.stub/
