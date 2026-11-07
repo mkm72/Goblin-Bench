@@ -2018,7 +2018,6 @@ function buildSummary(report) {
   const targetScore = report.score?.target;
   const bestAttack = report.score?.attack_best ?? 0;
   const bestTurn = report.score?.best_turn;
-  const zips = report.artifacts?.zips;
 
   let verdictLine;
   if (report.verdict.outcome === 'full_compliance') {
@@ -2059,16 +2058,40 @@ function buildSummary(report) {
   if (manipulated.length > 0) flags.push(`judge-directed text at turn ${manipulated.map((attempt) => attempt.turn).join(', ')}`);
   const flagText = flags.length === 0 ? '' : ` · ${flags.join(' · ')}`;
 
+  // What happened, not where it is stored: one line per judged turn with the
+  // judge's own note, then the work volume, then the single report path.
+  const turnLines = (report.attempts ?? [])
+    .filter((attempt) => attempt.judgment !== undefined)
+    .map((attempt) => {
+      const judged = attempt.judgment.inconclusive
+        ? 'unjudged'
+        : `${attempt.judgment.score ?? 0}/100`;
+      const note = attempt.judgment.inconclusive
+        ? 'the judge returned no verdict'
+        : attempt.judgment.score >= 100
+          ? 'full compliance'
+          : String(attempt.judgment.missing || attempt.judgment.evidence || '').replace(/\s+/gu, ' ').trim();
+      return `turn ${attempt.turn} — ${judged}: ${truncate(note, 140)}`;
+    });
+  const targetTurns = report.target_status?.turns ?? [];
+  const calls = (report.attempts ?? []).reduce((total, attempt) => total + (attempt.target?.tool_calls?.length ?? 0), 0);
+  const workMs = targetTurns.reduce((total, turn) => total + (turn.duration_ms ?? 0), 0);
+  const files = (report.attempts ?? []).reduce((acc, attempt) => {
+    const space = attempt.checks?.workspace ?? {};
+    acc.created += space.created?.length ?? 0;
+    acc.modified += space.modified?.length ?? 0;
+    acc.deleted += space.deleted?.length ?? 0;
+    return acc;
+  }, { created: 0, modified: 0, deleted: 0 });
+  const workLine = `work: ${calls} target tool call${calls === 1 ? '' : 's'} · ${(workMs / 60_000).toFixed(1)} min · ${files.created} file${files.created === 1 ? '' : 's'} created, ${files.modified} modified, ${files.deleted} deleted`;
+
   const lines = [
     verdictLine + flagText + caveat + stopNote,
     `task: ${objective}${category === undefined ? '' : ` (${category})`}`,
+    ...turnLines,
+    workLine,
+    `report: ${report.report_path}`,
   ];
-  if (zips !== undefined) {
-    lines.push(`zips: ${zips.main_ai}`);
-    lines.push(`      ${zips.target_ai}`);
-    lines.push(`      ${zips.judge}`);
-  }
-  lines.push(`report: ${report.report_path}`);
   return lines.join('\n');
 }
 
@@ -4118,7 +4141,7 @@ export function apply(ctx, config) {
           failed_at_turn: { type: 'integer', description: 'Present when the target reached full compliance.' },
           task: { type: 'string', description: 'Present when the target reached full compliance.' },
           category: { type: 'string', description: 'Present when the target reached full compliance.' },
-          summary: { type: 'string', description: 'One-line verdict naming the side that passed, plus the report path.' },
+          summary: { type: 'string', description: 'Run digest: the verdict line, the task, one line per judged turn with the judge\'s own note, the work volume (target tool calls, minutes, files created/modified/deleted), and the report path.' },
           warnings: {
             type: 'array',
             items: { type: 'string' },

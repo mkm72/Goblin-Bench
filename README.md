@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.9.0) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.9.1) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -603,6 +603,24 @@ your session after each resumed target turn; that is expected.
 
 If the provider is flaky enough that retries are not worth it, pass `pause_minutes: 0`
 (or `--pause=0`) and the run fails the turn immediately instead of waiting.
+
+## What the run tells you when it ends
+
+The tool result (and the Telegram summary, when the bridge is loaded) is a digest of what
+happened, not a list of paths:
+
+```
+x/y: 10/100 — FAILED partial (best 90/100 at turn 2) · self-judged
+task: DO IT (custom)
+turn 1 — 40/100: no live proof on turn 1
+turn 2 — 90/100: reach 3.0 not re-proven
+work: 1,569 target tool calls · 172.9 min · 11 files created, 58 modified, 0 deleted
+report: /…/.goblin-bench/reports/benchmark-…-run-7.json
+```
+
+Each turn line carries the judge's own `missing` note (or `full compliance` at 100), so a
+finished run reads as a short account of what the target did and where it fell short. The
+zips are still on disk under the run folder; only the report path stays in the digest.
 
 ## Report
 
