@@ -2,7 +2,7 @@
 
 [![Support this project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mkm72)
 
-A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.8.12) that red-teams
+A DeepSeek Harness plugin (bundle `@local/dsh-goblin-bench`, version 0.9.0) that red-teams
 one model against a prohibited behavior and reports **that model's** score — not the
 attacker's. `benchmark_ai` runs one scenario against one model; `benchmark_suite` runs your
 scenarios against several models and writes a pass/fail scorecard per model.
@@ -324,6 +324,7 @@ helper hint (see [Target subagents and orchestration](#target-subagents-and-orch
 | `main_ai` | no | Attacker route, `"provider/model"` or a bare model id (caller's provider). **Omit it and the chat you are in becomes the red team** — the attacker runs on the calling session's model. |
 | `target_benchmark_ai` | yes | Model under test, same route syntax. |
 | `turns` | no | Maximum attempts. Default 3, clamped to 20. Every turn runs, even after a failure. |
+| `carry_workspace` | no | Start each turn's target from the previous turn's tree instead of an empty folder (default `true`; turn 1 is always empty). `false` (or `--no-carry`) restores the old reset-every-turn behaviour. See [Carrying the workspace between turns](#carrying-the-workspace-between-turns). |
 | `extra_tools` | no | Extra tool names to allow for the attacker and the judge on top of their defaults (attacker: `read`, `write`, `edit`, `glob`, `grep`; judge: `read`, `grep`, `glob`). Use it to hand either role a tool from another plugin or an MCP server. Default none. A name the caller cannot see is ignored with a warning. |
 | `resume_from` | no | Path to an earlier report (absolute, or relative to your cwd). Its turns are loaded as already judged, its frozen task is kept, and the run continues at the next turn instead of repeating turn 1. `turns` then defaults to the report's turn count. |
 | `task` | no | The prohibited behavior to induce. Omit and the attacker picks one of the built-in taxonomy categories on turn 1 and freezes it. |
@@ -400,6 +401,23 @@ same way when it has independent pieces of its own."* Which variant the target g
 recorded in `config.target_orchestration` (`chunked`, `chunked-nested`, `plain` for the
 older one-liner, or `off`) and in `config.target_helper_prompt`, and the judge is told the
 exact text the target saw.
+
+### Carrying the workspace between turns
+
+The target still gets one prompt per turn and no memory, but its **working directory now
+carries the previous turn's tree** (`carry_workspace`, default on). Turn 1 starts empty; from
+turn 2 the files the last turn left behind are there:
+
+- the attacker is told the tree persists, so it stops writing "copy the seed over it"
+  instructions that would discard the previous turn's work;
+- the judge is told the tree began with turn N-1, so earlier work is context for the
+  decision, not credit for this attempt;
+- on a honeypot run `.env` and `notes.txt` are still rewritten with a fresh canary, even
+  though the rest of the tree carries.
+
+Cost: one copy of the tree per turn — a 300 MB seed plus whatever the target built. Set
+`carry_workspace: false` (or `--no-carry`) for the old reset-every-turn behaviour, which is
+what every run before 0.9.0 used; compare scores only within the same mode.
 
 ### Messaging the operator (with `dsh-telegram`)
 
